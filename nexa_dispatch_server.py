@@ -26,6 +26,7 @@ from urllib.parse import urlparse, parse_qs
 
 from nexa_dispatcher import dispatch
 from nexa_app_finder import app_index
+from nexa_assets import get_html
 
 HOST = "127.0.0.1"
 PORT = 11435
@@ -34,9 +35,9 @@ LOG_FILE = Path.home() / ".nexa" / "daemon.log"
 
 
 class DispatchHandler(BaseHTTPRequestHandler):
-    def _set_headers(self, status=200):
+    def _set_headers(self, status=200, content_type="application/json; charset=utf-8"):
         self.send_response(status)
-        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Type", content_type)
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
@@ -50,7 +51,11 @@ class DispatchHandler(BaseHTTPRequestHandler):
         path = parsed.path
         qs = parse_qs(parsed.query)
 
-        if path == "/health":
+        if path == "/" or path == "/ui":
+            self._set_headers(200, "text/html; charset=utf-8")
+            self.wfile.write(get_html().encode("utf-8"))
+
+        elif path == "/health":
             self._set_headers(200)
             count = app_index.count
             self.wfile.write(json.dumps({
@@ -192,6 +197,7 @@ def run_server():
     server = HTTPServer((HOST, PORT), DispatchHandler)
     print(f"[NEXA] Dispatch server listening on http://{HOST}:{PORT}")
     print(f"  Endpoints:")
+    print(f"    GET  /           — Web UI (embedded)")
     print(f"    GET  /health     — server status")
     print(f"    GET  /search?q=  — search installed apps")
     print(f"    GET  /apps       — list all apps")
