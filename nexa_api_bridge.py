@@ -166,6 +166,36 @@ SYSTEM_CONTROL ACTIONS (Full Capability List)
     Params: type (shutdown|reboot|sleep|cancel), force (bool), delay_seconds
 50. lock_screen            : Lock the screen
 
+--- WEB SEARCH ---
+51. web_search             : Search Google and return results
+    Params: query, num_results (optional, default 5)
+52. fetch_url              : Fetch and extract text content from a URL
+    Params: url
+
+--- PACKAGE MANAGEMENT ---
+53. install_package        : Install a package using system package manager or pip
+    Params: name, manager (auto|apt|snap|winget|choco|brew|pip)
+
+--- SCRIPT CREATION ---
+54. create_script          : Create a script file with content (auto-executable)
+    Params: path, content, executable (bool, default true)
+
+--- KEYBOARD & MOUSE AUTOMATION ---
+55. type_text              : Type text using keyboard automation (pyautogui)
+    Params: text, interval (optional, default 0.02)
+56. press_key              : Press a keyboard key
+    Params: key
+57. hotkey                 : Press a keyboard shortcut (e.g., ctrl+c)
+    Params: keys (list, e.g. ["ctrl", "c"])
+58. mouse_click            : Click at screen coordinates
+    Params: x, y, button (left|right|middle), clicks (default 1)
+59. mouse_move             : Move mouse cursor to coordinates
+    Params: x, y
+60. mouse_scroll            : Scroll the mouse wheel
+    Params: amount (positive=up, negative=down)
+61. get_mouse_position     : Get current mouse cursor position
+62. get_screen_size        : Get screen resolution
+
 ==========================================================================
 AUTOMATION ACTIONS
 ==========================================================================
@@ -204,6 +234,11 @@ RULES
   the dispatcher will automatically search the entire system for the best match.
 - For piped commands like "ls | grep ..." use execute_pipe.
 - For file search use find_files.
+- When asked to search the web or Google something, use web_search.
+- When asked to read a web page, use fetch_url.
+- When asked to install software/packages, use install_package.
+- When asked to create a script, use create_script (writes file) then run_script (executes).
+- For GUI automation (type text, click, move mouse, press keys), use the keyboard/mouse actions.
 
 JSON FORMAT (actions only):
 ```json
@@ -235,6 +270,15 @@ EXAMPLES:
 - Manage service:  {"module":"system_control","action":"manage_service","parameters":{"name":"nginx","operation":"restart"}}
 - Cron job:        {"module":"automation","action":"create_cron_job","parameters":{"schedule":"0 9 * * *","command":"python backup.py"}}
 - Store pref:      {"module":"memory","action":"store_preference","parameters":{"key":"theme","value":"dark"}}
+- Web search:      {"module":"system_control","action":"web_search","parameters":{"query":"how to configure nginx reverse proxy"}}
+- Fetch URL:       {"module":"system_control","action":"fetch_url","parameters":{"url":"https://example.com"}}
+- Install pkg:     {"module":"system_control","action":"install_package","parameters":{"name":"htop"}}
+- Install pip:     {"module":"system_control","action":"install_package","parameters":{"name":"numpy","manager":"pip"}}
+- Create script:   {"module":"system_control","action":"create_script","parameters":{"path":"~/scripts/backup.sh","content":"#!/bin/bash\ntar -czf ~/backup.tar.gz ~/Documents"}}
+- Type text:       {"module":"system_control","action":"type_text","parameters":{"text":"Hello World"}}
+- Hotkey:          {"module":"system_control","action":"hotkey","parameters":{"keys":["ctrl","s"]}}
+- Mouse click:     {"module":"system_control","action":"mouse_click","parameters":{"x":500,"y":300}}
+- Screen size:     {"module":"system_control","action":"get_screen_size","parameters":{}}
 """
 
 

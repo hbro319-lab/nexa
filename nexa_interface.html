@@ -370,6 +370,8 @@
     <button class="qa" onclick="sendQuick('List running processes sorted by cpu')">processes</button>
     <button class="qa" onclick="sendQuick('Set volume to 40%')">volume</button>
     <button class="qa" onclick="sendQuick('Start focus routine for 25 minutes')">focus</button>
+    <button class="qa" onclick="sendQuick('Search Google for latest tech news')">🔍 web search</button>
+    <button class="qa" onclick="sendQuick('Get screen size and mouse position')">🖱️ screen info</button>
     <button class="qa" onclick="sendQuick('What can you do?')">? help</button>
   </div>
 
@@ -413,6 +415,12 @@ SYSTEM_CONTROL ACTIONS:
 - manage_service (name, operation) / list_services
 - schedule_command (command, time, repeat) / notify (title, message, urgency)
 - power_action (type, force, delay_seconds) / lock_screen
+- web_search (query, num_results) / fetch_url (url) — search Google or read web pages
+- install_package (name, manager) — install via apt/winget/choco/brew/pip
+- create_script (path, content, executable) — create executable script files
+- type_text (text) / press_key (key) / hotkey (keys) — keyboard automation
+- mouse_click (x, y, button, clicks) / mouse_move (x, y) / mouse_scroll (amount) — mouse automation
+- get_mouse_position / get_screen_size — screen info
 
 AUTOMATION: start_routine, run_script, create_cron_job
 MEMORY: store_preference, get_preference, list_preferences, delete_preference, clear_memory
@@ -441,7 +449,13 @@ Examples:
 - "system info" → {"module":"system_control","action":"get_system_info","parameters":{}}
 - "set brightness 70" → {"module":"system_control","action":"set_brightness","parameters":{"level":70}}
 - "wifi networks" → {"module":"system_control","action":"get_wifi_networks","parameters":{}}
-- "restart nginx" → {"module":"system_control","action":"manage_service","parameters":{"name":"nginx","operation":"restart"}}`;
+- "restart nginx" → {"module":"system_control","action":"manage_service","parameters":{"name":"nginx","operation":"restart"}}
+- "search Google for python tutorials" → {"module":"system_control","action":"web_search","parameters":{"query":"python tutorials"}}
+- "read https://example.com" → {"module":"system_control","action":"fetch_url","parameters":{"url":"https://example.com"}}
+- "install htop" → {"module":"system_control","action":"install_package","parameters":{"name":"htop"}}
+- "create a bash script that backs up Documents" → {"module":"system_control","action":"create_script","parameters":{"path":"~/scripts/backup.sh","content":"#!/bin/bash\\ntar -czf ~/backup.tar.gz ~/Documents"}}
+- "press ctrl+s" → {"module":"system_control","action":"hotkey","parameters":{"keys":["ctrl","s"]}}
+- "click at 500 300" → {"module":"system_control","action":"mouse_click","parameters":{"x":500,"y":300}}`;
 
 // ── STATE ────────────────────────────────────────────────────────────
 let history = [];
