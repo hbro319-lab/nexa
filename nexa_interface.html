@@ -422,6 +422,16 @@ SYSTEM_CONTROL ACTIONS:
 - mouse_click (x, y, button, clicks) / mouse_move (x, y) / mouse_scroll (amount) — mouse automation
 - get_mouse_position / get_screen_size — screen info
 
+SMART / WEB ACTIONS:
+- web_search (service, query) — search Google, YouTube, Spotify, Amazon, Reddit, GitHub, Wikipedia, Maps, eBay, Twitter/X, StackOverflow, npm, PyPI, news, images, translate, and 60+ services
+- open_website (site) — open Gmail, Discord, Netflix, Notion, Slack, WhatsApp, GitHub, etc.
+- multi_search (queries[]) — search multiple services at once (opens tabs)
+- smart_open (target) — intelligently open URL, website, app, file, or email
+- download (url, path) — download file from URL
+- fetch_text (url) — get text content of a web page
+- chain (steps[]) — execute multiple actions in sequence
+- list_web_services / list_websites — show available services
+
 AUTOMATION: start_routine, run_script, create_cron_job
 MEMORY: store_preference, get_preference, list_preferences, delete_preference, clear_memory
 VOICE: activate, speak (text, rate)
@@ -432,6 +442,10 @@ RULES:
 - Gesture event → ONLY JSON.
 - Always respond in the user's language.
 - SAFETY: Ask confirmation before destructive actions.
+- "search on X for Y" / "look up Y on X" → web_search with service=X, query=Y
+- "play drake on spotify" → web_search service=spotify query=drake
+- "open gmail" / "go to discord" → open_website
+- Complex multi-step tasks → use chain action
 
 JSON FORMAT:
 \`\`\`json
@@ -441,21 +455,29 @@ JSON FORMAT:
 Examples:
 - "open calculator" → {"module":"system_control","action":"open_app","parameters":{"name":"Calculator"}}
 - "search browser apps" → {"module":"system_control","action":"search_apps","parameters":{"query":"browser"}}
+- "search on google amazon deals" → {"module":"system_control","action":"web_search","parameters":{"service":"google","query":"amazon deals"}}
+- "search on spotify drake" → {"module":"system_control","action":"web_search","parameters":{"service":"spotify","query":"drake"}}
+- "search on youtube python tutorial" → {"module":"system_control","action":"web_search","parameters":{"service":"youtube","query":"python tutorial"}}
+- "search on amazon wireless headphones" → {"module":"system_control","action":"web_search","parameters":{"service":"amazon","query":"wireless headphones"}}
+- "search on reddit best linux distro" → {"module":"system_control","action":"web_search","parameters":{"service":"reddit","query":"best linux distro"}}
+- "open gmail" → {"module":"system_control","action":"open_website","parameters":{"site":"gmail"}}
+- "open netflix" → {"module":"system_control","action":"open_website","parameters":{"site":"netflix"}}
+- "open discord" → {"module":"system_control","action":"open_website","parameters":{"site":"discord"}}
+- "translate hello to spanish" → {"module":"system_control","action":"web_search","parameters":{"service":"translate","query":"hello in spanish"}}
+- "find pizza places nearby" → {"module":"system_control","action":"web_search","parameters":{"service":"maps","query":"pizza places nearby"}}
+- "download file" → {"module":"system_control","action":"download","parameters":{"url":"https://example.com/file.pdf"}}
 - "copy clipboard" → {"module":"system_control","action":"get_clipboard","parameters":{}}
-- "send notification" → {"module":"system_control","action":"notify","parameters":{"title":"Hello","message":"World"}}
 - "lock screen" → {"module":"system_control","action":"lock_screen","parameters":{}}
 - "find pdf files" → {"module":"system_control","action":"find_files","parameters":{"path":"~/Documents","pattern":"\\.pdf$"}}
-- "ps aux | grep python" → {"module":"system_control","action":"execute_pipe","parameters":{"command":"ps aux | grep python"}}
 - "system info" → {"module":"system_control","action":"get_system_info","parameters":{}}
-- "set brightness 70" → {"module":"system_control","action":"set_brightness","parameters":{"level":70}}
-- "wifi networks" → {"module":"system_control","action":"get_wifi_networks","parameters":{}}
 - "restart nginx" → {"module":"system_control","action":"manage_service","parameters":{"name":"nginx","operation":"restart"}}
-- "search Google for python tutorials" → {"module":"system_control","action":"web_search","parameters":{"query":"python tutorials"}}
+- "search Google for python tutorials" → {"module":"system_control","action":"web_search","parameters":{"service":"google","query":"python tutorials"}}
 - "read https://example.com" → {"module":"system_control","action":"fetch_url","parameters":{"url":"https://example.com"}}
 - "install htop" → {"module":"system_control","action":"install_package","parameters":{"name":"htop"}}
 - "create a bash script that backs up Documents" → {"module":"system_control","action":"create_script","parameters":{"path":"~/scripts/backup.sh","content":"#!/bin/bash\\ntar -czf ~/backup.tar.gz ~/Documents"}}
 - "press ctrl+s" → {"module":"system_control","action":"hotkey","parameters":{"keys":["ctrl","s"]}}
 - "click at 500 300" → {"module":"system_control","action":"mouse_click","parameters":{"x":500,"y":300}}`;
+
 
 // ── STATE ────────────────────────────────────────────────────────────
 let history = [];

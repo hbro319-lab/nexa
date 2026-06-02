@@ -26,6 +26,12 @@ except ImportError:
     psutil = None
 
 from nexa_app_finder import app_index, AppEntry
+from nexa_smart_actions import (
+    web_search, open_website, multi_search, smart_open,
+    download_url, web_scrape_text, chain_actions,
+    list_web_services, list_direct_sites,
+    WEB_SERVICES, DIRECT_URLS,
+)
 
 SYSTEM = platform.system()  # 'Darwin', 'Windows', 'Linux'
 
@@ -1314,45 +1320,50 @@ def handle_system_control(action, params):
         except Exception as e:
             return f"Error: {e}"
 
-    # ── Web Search & URL Fetch ──────────────────────────────────────────
+    # ------------------------------------------------------------------
+    # SMART / WEB ACTIONS
+    # ------------------------------------------------------------------
 
     elif action == "web_search":
-        """Search Google and return results."""
+        service = params.get("service", "google")
         query = params.get("query", "")
-        num = int(params.get("num_results", 5))
         if not query:
-            return "Error: 'query' parameter required"
-        try:
-            import requests as _req
-            from urllib.parse import quote_plus
-            headers = {
-                "User-Agent": (
-                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                )
-            }
-            url = f"https://www.google.com/search?q={quote_plus(query)}&num={num}&hl=es"
-            resp = _req.get(url, headers=headers, timeout=15)
-            resp.raise_for_status()
-            # Parse results
-            results = []
-            # Simple extraction from HTML
-            import re as _re
-            titles = _re.findall(r'<h3[^>]*>(.*?)</h3>', resp.text)
-            links = _re.findall(r'<a href="/url\?q=(https?://[^&"]+)', resp.text)
-            for i, (title, link) in enumerate(zip(titles, links)):
-                title = _re.sub(r'<[^>]+>', '', title)
-                results.append(f"{i+1}. {title}\n   {link}")
-                if len(results) >= num:
-                    break
-            if not results:
-                return f"No results found for: '{query}'"
-            return f"Search results for '{query}':\n\n" + "\n\n".join(results)
-        except Exception as e:
-            return f"Error searching: {e}"
+            return "Missing 'query' parameter"
+        return web_search(service, query)
+
+    elif action == "open_website":
+        site = params.get("site", params.get("name", params.get("url", "")))
+        if not site:
+            return "Missing 'site' parameter"
+        return open_website(site)
+
+    elif action == "multi_search":
+        queries = params.get("queries", [])
+        if not queries:
+            return "Missing 'queries' parameter (list of {service, query})"
+        return multi_search(queries)
+
+    elif action == "smart_open":
+        target = params.get("target", params.get("url", params.get("name", "")))
+        if not target:
+            return "Missing 'target' parameter"
+        return smart_open(target)
+
+    elif action == "download":
+        url = params.get("url", "")
+        save_path = params.get("path", params.get("save_path", ""))
+        if not url:
+            return "Missing 'url' parameter"
+        return download_url(url, save_path)
+
+    elif action == "fetch_text":
+        url = params.get("url", "")
+        if not url:
+            return "Missing 'url' parameter"
+        return web_scrape_text(url)
 
     elif action == "fetch_url":
-        """Fetch and extract text content from a URL."""
+        """Alias for fetch_text — fetch and extract text content from a URL."""
         url = params.get("url", "")
         if not url:
             return "Error: 'url' parameter required"
@@ -1368,14 +1379,10 @@ def handle_system_control(action, params):
             }
             resp = _req.get(url, headers=headers, timeout=15)
             resp.raise_for_status()
-            # Strip HTML tags for readable text
             import re as _re
             text = resp.text
-            # Remove script/style
             text = _re.sub(r'<(script|style)[^>]*>.*?</\1>', '', text, flags=_re.DOTALL)
-            # Strip tags
             text = _re.sub(r'<[^>]+>', ' ', text)
-            # Clean whitespace
             text = _re.sub(r'\s+', ' ', text).strip()
             if len(text) > 8000:
                 text = text[:8000] + "\n... (truncated)"
@@ -1383,7 +1390,23 @@ def handle_system_control(action, params):
         except Exception as e:
             return f"Error fetching {url}: {e}"
 
-    # ── Install Package ──────────────────────────────────────────────────
+    elif action == "chain":
+        steps = params.get("steps", [])
+        if not steps:
+            return "Missing 'steps' parameter (list of command dicts)"
+        return chain_actions(steps)
+
+    elif action == "list_web_services":
+        services = list_web_services()
+        return f"Available services ({len(services)}): " + ", ".join(services)
+
+    elif action == "list_websites":
+        sites = list_direct_sites()
+        return f"Known websites ({len(sites)}): " + ", ".join(sites)
+
+    # ------------------------------------------------------------------
+    # INSTALL PACKAGE
+    # ------------------------------------------------------------------
 
     elif action == "install_package":
         """Install a package using the system package manager or pip."""
@@ -1454,7 +1477,9 @@ def handle_system_control(action, params):
                 continue
         return f"Failed to install '{package}' with available package managers"
 
-    # ── Create Script ────────────────────────────────────────────────────
+    # ------------------------------------------------------------------
+    # CREATE SCRIPT
+    # ------------------------------------------------------------------
 
     elif action == "create_script":
         """Create a script file with the given content."""
@@ -1475,7 +1500,9 @@ def handle_system_control(action, params):
         except Exception as e:
             return f"Error creating script: {e}"
 
-    # ── Keyboard / Mouse Automation ──────────────────────────────────────
+    # ------------------------------------------------------------------
+    # KEYBOARD / MOUSE AUTOMATION
+    # ------------------------------------------------------------------
 
     elif action == "type_text":
         """Type text using keyboard automation."""

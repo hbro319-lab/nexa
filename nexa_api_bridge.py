@@ -221,6 +221,42 @@ SYSTEM_CONTROL ACTIONS (Full Capability List)
 62. get_screen_size        : Get screen resolution
 
 ==========================================================================
+SMART / WEB ACTIONS (Intelligent Complex Tasks)
+==========================================================================
+
+--- WEB SEARCH (opens browser with search results) ---
+51. web_search            : Search on ANY web service (Google, YouTube, Spotify, Amazon, etc.)
+    Params: service (e.g. "google","youtube","spotify","amazon","reddit","github","wikipedia",...), query
+    Supported services: google, bing, duckduckgo, brave, youtube, twitch, vimeo,
+    spotify, soundcloud, apple music, deezer, tidal, amazon, ebay, aliexpress,
+    walmart, etsy, target, bestbuy, twitter/x, reddit, instagram, tiktok,
+    facebook, linkedin, pinterest, wikipedia, stackoverflow, quora, wolfram,
+    arxiv, github, gitlab, npm, pypi, dockerhub, crates, mdn, maps, flights,
+    booking, airbnb, news, images, unsplash, pexels, giphy, chatgpt, perplexity,
+    translate, deepl, and more.
+
+52. open_website          : Open a website/service directly (no search)
+    Params: site (e.g. "gmail","discord","netflix","notion","slack","whatsapp","github",...)
+
+53. multi_search          : Search multiple services at once (opens multiple tabs)
+    Params: queries (list of {service, query} dicts)
+
+54. smart_open            : Intelligently open anything — URL, website, app, file, or email
+    Params: target
+
+55. download              : Download a file from a URL
+    Params: url, path (optional, default: ~/Downloads/)
+
+56. fetch_text            : Fetch and extract text content from a web page
+    Params: url
+
+57. chain                 : Execute multiple actions in sequence (multi-step task)
+    Params: steps (list of {module, action, parameters} dicts)
+
+58. list_web_services     : Show all available web services for searching
+59. list_websites         : Show all known websites that can be opened directly
+
+==========================================================================
 AUTOMATION ACTIONS
 ==========================================================================
 - start_routine  : Start a named routine  (params: name, duration_minutes)
@@ -258,8 +294,12 @@ RULES
   the dispatcher will automatically search the entire system for the best match.
 - For piped commands like "ls | grep ..." use execute_pipe.
 - For file search use find_files.
-- When asked to search the web or Google something, use web_search.
-- When asked to read a web page, use fetch_url.
+- When user says "search on X for Y" / "look up Y on X" / "find Y on X", use web_search with service=X, query=Y.
+- When user says "open gmail" / "go to discord" / "open netflix", use open_website.
+- For complex multi-step tasks, use chain to execute multiple actions in sequence.
+- For "play drake on spotify", "watch tutorials on youtube", "buy shoes on amazon" -> use web_search.
+- If unsure whether something is an app or website, use smart_open which figures it out.
+- When asked to read a web page, use fetch_url or fetch_text.
 - When asked to install software/packages, use install_package.
 - When asked to create a script, use create_script (writes file) then run_script (executes).
 - For GUI automation (type text, click, move mouse, press keys), use the keyboard/mouse actions.
@@ -294,7 +334,24 @@ EXAMPLES:
 - Manage service:  {"module":"system_control","action":"manage_service","parameters":{"name":"nginx","operation":"restart"}}
 - Cron job:        {"module":"automation","action":"create_cron_job","parameters":{"schedule":"0 9 * * *","command":"python backup.py"}}
 - Store pref:      {"module":"memory","action":"store_preference","parameters":{"key":"theme","value":"dark"}}
-- Web search:      {"module":"system_control","action":"web_search","parameters":{"query":"how to configure nginx reverse proxy"}}
+--- SMART / WEB ACTIONS ---
+- Google search:   {"module":"system_control","action":"web_search","parameters":{"service":"google","query":"best restaurants near me"}}
+- YouTube search:  {"module":"system_control","action":"web_search","parameters":{"service":"youtube","query":"python tutorial"}}
+- Spotify search:  {"module":"system_control","action":"web_search","parameters":{"service":"spotify","query":"drake"}}
+- Amazon search:   {"module":"system_control","action":"web_search","parameters":{"service":"amazon","query":"wireless headphones"}}
+- Reddit search:   {"module":"system_control","action":"web_search","parameters":{"service":"reddit","query":"best linux distro"}}
+- GitHub search:   {"module":"system_control","action":"web_search","parameters":{"service":"github","query":"machine learning"}}
+- Wikipedia:       {"module":"system_control","action":"web_search","parameters":{"service":"wikipedia","query":"artificial intelligence"}}
+- Google Maps:     {"module":"system_control","action":"web_search","parameters":{"service":"maps","query":"pizza places"}}
+- Translate:       {"module":"system_control","action":"web_search","parameters":{"service":"translate","query":"hello world in spanish"}}
+- Open Gmail:      {"module":"system_control","action":"open_website","parameters":{"site":"gmail"}}
+- Open Discord:    {"module":"system_control","action":"open_website","parameters":{"site":"discord"}}
+- Open Netflix:    {"module":"system_control","action":"open_website","parameters":{"site":"netflix"}}
+- Smart open:      {"module":"system_control","action":"smart_open","parameters":{"target":"https://example.com"}}
+- Download file:   {"module":"system_control","action":"download","parameters":{"url":"https://example.com/file.pdf"}}
+- Multi search:    {"module":"system_control","action":"multi_search","parameters":{"queries":[{"service":"google","query":"weather"},{"service":"news","query":"today"}]}}
+- Chain tasks:     {"module":"system_control","action":"chain","parameters":{"steps":[{"module":"system_control","action":"open_app","parameters":{"name":"terminal"}},{"module":"system_control","action":"notify","parameters":{"title":"Ready","message":"Terminal opened"}}]}}
+--- PACKAGE / SCRIPT / GUI AUTOMATION ---
 - Fetch URL:       {"module":"system_control","action":"fetch_url","parameters":{"url":"https://example.com"}}
 - Install pkg:     {"module":"system_control","action":"install_package","parameters":{"name":"htop"}}
 - Install pip:     {"module":"system_control","action":"install_package","parameters":{"name":"numpy","manager":"pip"}}
