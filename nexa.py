@@ -19,12 +19,23 @@ import threading
 
 # Ensure the bundled directory is in the path (for PyInstaller)
 if getattr(sys, 'frozen', False):
-    BASE_DIR = os.path.dirname(sys.executable)
+    # PyInstaller extracts bundled data files to sys._MEIPASS
+    BUNDLE_DIR = sys._MEIPASS
+    EXE_DIR = os.path.dirname(sys.executable)
 else:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    BUNDLE_DIR = os.path.dirname(os.path.abspath(__file__))
+    EXE_DIR = BUNDLE_DIR
+
+# Set BASE_DIR: prefer the exe directory (so user can put their own config
+# next to the exe), fall back to the bundle dir for packaged defaults.
+BASE_DIR = EXE_DIR
 
 os.chdir(BASE_DIR)
 sys.path.insert(0, BASE_DIR)
+
+# Make BUNDLE_DIR available to other modules for finding packaged data files
+os.environ['NEXA_BUNDLE_DIR'] = BUNDLE_DIR
+os.environ['NEXA_EXE_DIR'] = EXE_DIR
 
 
 def run_cli():
@@ -120,12 +131,15 @@ def run_search(query):
 
 def run_gui():
     """Open the web UI in the default browser and start the server."""
-    html_path = os.path.join(BASE_DIR, "nexa_interface.html")
-    if os.path.exists(html_path):
-        print(f"[NEXA] Opening web UI: {html_path}")
-        webbrowser.open(f"file://{os.path.abspath(html_path)}")
+    # Check exe dir first, then bundle dir
+    for d in [EXE_DIR, BUNDLE_DIR, BASE_DIR]:
+        html_path = os.path.join(d, "nexa_interface.html")
+        if os.path.exists(html_path):
+            print(f"[NEXA] Opening web UI: {html_path}")
+            webbrowser.open(f"file://{os.path.abspath(html_path)}")
+            break
     else:
-        print(f"[WARN] nexa_interface.html not found at {html_path}")
+        print(f"[WARN] nexa_interface.html not found. Copy it next to the executable.")
 
     print("[NEXA] Starting dispatch server for the web UI...")
     run_server()
