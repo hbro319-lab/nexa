@@ -1,0 +1,102 @@
+{
+  "nexa": {
+    "version": "2.0.0",
+    "name": "NEXA",
+    "description": "Modular system-level personal assistant with full system control — powered by Ollama (local LLM)"
+  },
+
+  "ollama": {
+    "host": "http://localhost:11434",
+    "model": "llama3",
+    "stream": true,
+    "temperature": 0.3,
+    "context_window": 4096,
+    "notes": "Change 'model' to any model you have pulled. Run 'ollama list' to see available models."
+  },
+
+  "voice": {
+    "wake_word": "NEXA",
+    "language": "en-US",
+    "tts_engine": "system",
+    "stt_engine": "system",
+    "activation_timeout_seconds": 10
+  },
+
+  "gesture": {
+    "enabled": false,
+    "camera_index": 0,
+    "engine": "mediapipe",
+    "confidence_threshold": 0.75,
+    "gesture_map": {
+      "swipe_left":   { "module": "gesture_interface", "action": "navigate",   "parameters": { "direction": "left"  } },
+      "swipe_right":  { "module": "gesture_interface", "action": "navigate",   "parameters": { "direction": "right" } },
+      "thumbs_up":    { "module": "gesture_interface", "action": "confirm",    "parameters": { "gesture": "thumbs_up" } },
+      "closed_fist":  { "module": "gesture_interface", "action": "cancel",     "parameters": { "gesture": "closed_fist" } },
+      "open_hand":    { "module": "gesture_interface", "action": "pause",      "parameters": { "gesture": "open_hand" } },
+      "point":        { "module": "gesture_interface", "action": "select",     "parameters": { "gesture": "point" } }
+    }
+  },
+
+  "app_search": {
+    "enabled": true,
+    "cache_ttl_seconds": 300,
+    "auto_index_on_startup": true,
+    "include_path_binaries": true,
+    "notes": "The app finder scans .desktop files (Linux), Start Menu + Registry (Windows), and /Applications (macOS). Results are cached for cache_ttl_seconds."
+  },
+
+  "modules": {
+    "system_control":    { "enabled": true  },
+    "voice_interface":   { "enabled": true  },
+    "gesture_interface": { "enabled": false },
+    "automation":        { "enabled": true  },
+    "knowledge":         { "enabled": true  },
+    "memory":            { "enabled": true  },
+    "sensors":           { "enabled": true  },
+    "extensions":        { "enabled": false }
+  },
+
+  "memory": {
+    "storage": "~/.nexa_memory.json",
+    "max_entries": 500
+  },
+
+  "automation": {
+    "routines_dir": "./routines",
+    "builtin_routines": {
+      "focus": {
+        "steps": ["mute_notifications", "set_dnd", "start_timer"],
+        "default_duration_minutes": 25
+      },
+      "morning": {
+        "steps": ["open_calendar", "open_email", "weather_brief"],
+        "trigger": "08:00"
+      },
+      "shutdown": {
+        "steps": ["save_open_files", "close_apps", "system_shutdown"],
+        "requires_confirmation": true
+      }
+    }
+  },
+
+  "ui": {
+    "theme": "dark",
+    "accent_color": "#7f6af8",
+    "show_json_output": true,
+    "chat_history_limit": 100
+  },
+
+  "safety": {
+    "confirm_before_destructive": true,
+    "destructive_actions": ["delete_file", "power_action", "kill_process", "clear_memory"],
+    "blocked_paths": ["/System", "/Windows/System32", "/etc/shadow"]
+  },
+
+  "logging": {
+    "enabled": true,
+    "level": "info",
+    "file": "~/.nexa_log.jsonl",
+    "log_commands": true,
+    "log_responses": false
+  }
+}

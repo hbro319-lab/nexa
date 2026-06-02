@@ -1,0 +1,20 @@
+# NEXA v2.1 — Python dependencies
+# All inference runs through local Ollama — no cloud API keys needed
+
+requests>=2.31.0          # Ollama HTTP API calls + web search/fetch
+psutil>=5.9.0             # System monitoring, process management, battery, temps
+beautifulsoup4>=4.12.0    # Web page content extraction (optional, for fetch_url)
+
+# Keyboard & mouse automation (optional — needed for type_text, hotkey, mouse_click, etc.)
+pyautogui>=0.9.54
+
+# Gesture engine (optional — only needed for nexa_gesture_engine.py)
+opencv-python>=4.9.0
+mediapipe>=0.10.0
+
+# Screenshot support (optional — fallback for systems without scrot/gnome-screenshot)
+pillow>=10.0.0
+
+# Windows-only volume control (auto-skipped on Linux/macOS)
+pycaw>=20240210; sys_platform == "win32"
+comtypes>=1.3.0; sys_platform == "win32"

@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Content-Security-Policy" content="connect-src * blob: data:; default-src * blob: data: 'unsafe-inline' 'unsafe-eval';">
+<title>NEXA — Powered by Ollama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0b0f;
+    --surface: #111318;
+    --surface2: #181b22;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --accent: #7f6af8;
+    --accent2: #a594ff;
+    --accent-glow: rgba(127,106,248,0.18);
+    --text: #e8e6f0;
+    --text2: #8b89a0;
+    --text3: #55536a;
+    --green: #1ed999;
+    --amber: #f5c542;
+    --red: #f06a6a;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  }
+
+  .app {
+    display: flex; flex-direction: column;
+    max-width: 860px; margin: 0 auto;
+    height: 100vh; padding: 16px;
+    gap: 12px;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    flex-shrink: 0;
+  }
+
+  .logo { display: flex; align-items: center; gap: 12px; }
+
+  .logo-ring {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 14px var(--accent-glow);
+  }
+  .logo-ring::after {
+    content: ''; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 8px var(--accent);
+  }
+
+  .logo-text { font-family: var(--mono); font-size: 18px; font-weight: 700; letter-spacing: 0.16em; }
+  .logo-sub  { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-top: 2px; letter-spacing: 0.06em; }
+
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+  .status-pill {
+    display: flex; align-items: center; gap: 7px;
+    font-family: var(--mono); font-size: 11px; color: var(--text2);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 12px;
+  }
+  .status-led {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green); box-shadow: 0 0 8px var(--green);
+    animation: ledpulse 2.5s ease-in-out infinite;
+  }
+  .status-led.error { background: var(--red); box-shadow: 0 0 8px var(--red); animation: none; }
+  @keyframes ledpulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+  /* OLLAMA CONFIG BAR */
+  .config-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); flex-shrink: 0;
+  }
+  .config-label { font-family: var(--mono); font-size: 11px; color: var(--text3); white-space: nowrap; }
+  .config-input {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: var(--radius); color: var(--text);
+    font-family: var(--mono); font-size: 12px;
+    padding: 5px 10px; outline: none;
+    transition: border-color 0.15s;
+  }
+  .config-input:focus { border-color: var(--accent); }
+  #url-input { width: 200px; }
+  #model-select { cursor: pointer; }
+  .test-btn {
+    font-family: var(--mono); font-size: 11px;
+    padding: 5px 12px; border-radius: var(--radius);
+    background: var(--surface2); border: 1px solid var(--border2);
+    color: var(--text2); cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .test-btn:hover { border-color: var(--accent); color: var(--accent2); }
+
+  /* MODULE BAR */
+  .module-bar {
+    display: flex; gap: 6px; overflow-x: auto; padding: 10px 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); scrollbar-width: none; flex-shrink: 0;
+  }
+  .mod-chip {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 10px;
+    padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+    border: 1px solid var(--border); color: var(--text3);
+    transition: all 0.2s; cursor: default;
+  }
+  .mod-chip.active {
+    border-color: var(--accent); color: var(--accent2);
+    background: var(--accent-glow); box-shadow: 0 0 10px var(--accent-glow);
+  }
+  .mod-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  /* CHAT */
+  .chat {
+    flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+    padding: 16px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius-lg); min-height: 0;
+    scrollbar-width: thin; scrollbar-color: var(--border2) transparent;
+  }
+  .msg { display: flex; gap: 10px; align-items: flex-start; animation: msgIn 0.2s ease; }
+  .msg.user { flex-direction: row-reverse; }
+  @keyframes msgIn { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:none} }
+
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 10px; font-weight: 700;
+  }
+  .avatar.nexa { background: var(--accent-glow); border: 1px solid var(--accent); color: var(--accent2); }
+  .avatar.user { background: var(--surface2); border: 1px solid var(--border2); color: var(--text2); }
+
+  .bubble {
+    max-width: 75%; padding: 11px 15px;
+    border-radius: var(--radius-lg); font-size: 14px; line-height: 1.65;
+  }
+  .bubble.nexa { background: var(--surface2); border: 1px solid var(--border); border-top-left-radius: 3px; color: var(--text); }
+  .bubble.user { background: var(--accent); color: white; border-top-right-radius: 3px; }
+
+  .json-card {
+    margin-top: 10px; background: #0d0f14;
+    border: 1px solid var(--border2); border-left: 3px solid var(--accent);
+    border-radius: var(--radius); padding: 12px 14px;
+    font-family: var(--mono); font-size: 12px; line-height: 1.7;
+    white-space: pre; overflow-x: auto; color: #c5c0e0;
+  }
+  .jk { color: #9ee8cb; } .js { color: #f5c542; } .jn { color: #f09595; } .jb { color: #a594ff; }
+
+  .typing-bub { background: var(--surface2); border: 1px solid var(--border); border-top-left-radius: 3px; border-radius: var(--radius-lg); padding: 14px 16px; }
+  .typing { display: flex; gap: 5px; align-items: center; }
+  .typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: 0.4; animation: blink 1.2s ease infinite; }
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%,80%,100%{opacity:0.2}40%{opacity:1} }
+
+  /* QUICK ACTIONS */
+  .quick-row { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+  .qa {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 12px; font-family: var(--mono);
+    padding: 6px 12px; border-radius: 20px;
+    border: 1px solid var(--border); color: var(--text3); background: var(--surface2);
+    cursor: pointer; white-space: nowrap; transition: all 0.15s;
+  }
+  .qa:hover { border-color: var(--accent); color: var(--accent2); background: var(--accent-glow); }
+
+  /* INPUT */
+  .input-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: var(--radius-lg); flex-shrink: 0;
+  }
+  .prompt-label { font-family: var(--mono); font-size: 12px; color: var(--accent); flex-shrink: 0; user-select: none; }
+  #user-input {
+    flex: 1; background: transparent; border: none; outline: none;
+    font-family: var(--sans); font-size: 14px; color: var(--text); caret-color: var(--accent);
+  }
+  #user-input::placeholder { color: var(--text3); }
+  .send-btn {
+    width: 36px; height: 36px; border-radius: var(--radius);
+    background: var(--accent); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 15px; transition: all 0.15s; flex-shrink: 0;
+  }
+  .send-btn:hover { background: var(--accent2); transform: scale(1.04); }
+  .send-btn:disabled { opacity: 0.35; transform: none; cursor: default; }
+  .voice-btn {
+    width: 36px; height: 36px; border-radius: var(--radius);
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text); display: flex; align-items: center;
+    justify-content: center; cursor: pointer; transition: all 0.15s;
+    font-size: 16px;
+  }
+  .voice-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(127,106,248,0.1); }
+  .voice-btn.active { background: var(--accent); color: #111; }
+  .chat::-webkit-scrollbar { width: 4px; }
+  .chat::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+
+  .error-msg { color: var(--red); font-family: var(--mono); font-size: 12px; }
+  .stream-cursor::after { content: '▋'; animation: blink 0.8s step-end infinite; color: var(--accent2); }
+
+  /* RECORDING INDICATOR */
+  .rec-indicator {
+    display: none; align-items: center; gap: 7px;
+    font-family: var(--mono); font-size: 11px; color: var(--red);
+    background: rgba(240,106,106,0.10); border: 1px solid rgba(240,106,106,0.3);
+    border-radius: 20px; padding: 5px 12px; animation: recpulse 1.2s ease-in-out infinite;
+  }
+  .rec-indicator.active { display: flex; }
+  .rec-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); }
+  @keyframes recpulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+
+  /* GESTURE CAMERA PANEL */
+  .gesture-panel {
+    display: none; position: fixed; bottom: 90px; right: 20px;
+    width: 220px; background: var(--surface);
+    border: 1px solid var(--accent); border-radius: var(--radius-lg);
+    overflow: hidden; box-shadow: 0 0 24px var(--accent-glow); z-index: 100;
+  }
+  .gesture-panel.active { display: block; }
+  .gesture-panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; background: var(--accent-glow);
+    font-family: var(--mono); font-size: 10px; color: var(--accent2);
+  }
+  #gesture-video { width: 100%; height: 140px; object-fit: cover; background: #000; transform: scaleX(-1); }
+  #gesture-canvas { position: absolute; top: 32px; left: 0; width: 100%; height: 140px; pointer-events: none; transform: scaleX(-1); }
+  .gesture-label {
+    padding: 6px 12px; font-family: var(--mono); font-size: 11px;
+    color: var(--green); min-height: 26px; text-align: center;
+  }
+  .gesture-btn {
+    width: 36px; height: 36px; border-radius: var(--radius);
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text); display: flex; align-items: center;
+    justify-content: center; cursor: pointer; transition: all 0.15s; font-size: 16px;
+  }
+  .gesture-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(127,106,248,0.1); }
+  .gesture-btn.active { background: var(--accent); color: #111; border-color: var(--accent); }
+  .record-btn {
+    width: 36px; height: 36px; border-radius: var(--radius);
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text); display: flex; align-items: center;
+    justify-content: center; cursor: pointer; transition: all 0.15s; font-size: 16px;
+  }
+  .record-btn:hover { border-color: var(--red); color: var(--red); background: rgba(240,106,106,0.08); }
+  .record-btn.recording { background: var(--red); color: white; border-color: var(--red); animation: recpulse 1.2s ease-in-out infinite; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-ring"></div>
+      <div>
+        <div class="logo-text">NEXA</div>
+        <div class="logo-sub">LOCAL INTELLIGENCE · OLLAMA</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="rec-indicator" id="rec-indicator">
+        <div class="rec-dot"></div>
+        <span id="rec-timer">REC 0:00</span>
+      </div>
+      <div class="status-pill">
+        <div class="status-led" id="status-led"></div>
+        <span id="status-text">CONNECTING</span>
+      </div>
+      <button class="record-btn" id="record-btn" title="Grabar pantalla">⏺</button>
+      <button class="gesture-btn" id="gesture-btn" title="Activar gestos por cámara">✋</button>
+      <button class="voice-btn" id="voice-btn" title="Activar modo voz">🎙</button>
+    </div>
+  </div>
+
+  <!-- GESTURE CAMERA PANEL -->
+  <div class="gesture-panel" id="gesture-panel">
+    <div class="gesture-panel-header">
+      <span>✋ GESTURE ENGINE</span>
+      <button onclick="toggleGestures()" style="background:none;border:none;color:var(--accent2);cursor:pointer;font-size:13px;">✕</button>
+    </div>
+    <div style="position:relative;">
+      <video id="gesture-video" autoplay muted playsinline></video>
+      <canvas id="gesture-canvas"></canvas>
+    </div>
+    <div class="gesture-label" id="gesture-label">— apunta con la cámara —</div>
+  </div>
+
+  <!-- OLLAMA CONFIG -->
+  <div class="config-bar">
+    <span class="config-label">OLLAMA HOST</span>
+    <input class="config-input" id="url-input" type="text" value="http://localhost:11434" spellcheck="false" />
+    <span class="config-label">MODEL</span>
+    <select class="config-input" id="model-select">
+      <option value="llama3">llama3</option>
+      <option value="llama3.1">llama3.1</option>
+      <option value="llama3.2">llama3.2</option>
+      <option value="mistral">mistral</option>
+      <option value="mixtral">mixtral</option>
+      <option value="gemma2">gemma2</option>
+      <option value="gemma3">gemma3</option>
+      <option value="phi3">phi3</option>
+      <option value="phi4">phi4</option>
+      <option value="deepseek-r1">deepseek-r1</option>
+      <option value="qwen2.5">qwen2.5</option>
+      <option value="codellama">codellama</option>
+      <option value="custom">custom…</option>
+    </select>
+    <input class="config-input" id="custom-model" type="text" placeholder="model:tag" style="width:130px;display:none;" spellcheck="false" />
+    <button class="test-btn" id="test-btn">⚡ test connection</button>
+  </div>
+
+  <!-- MODULE BAR -->
+  <div class="module-bar" id="module-bar">
+    <div class="mod-chip active" data-m="knowledge"><div class="mod-dot"></div>knowledge</div>
+    <div class="mod-chip" data-m="system_control"><div class="mod-dot"></div>system_control</div>
+    <div class="mod-chip" data-m="automation"><div class="mod-dot"></div>automation</div>
+    <div class="mod-chip" data-m="voice_interface"><div class="mod-dot"></div>voice_interface</div>
+    <div class="mod-chip" data-m="gesture_interface"><div class="mod-dot"></div>gesture_interface</div>
+    <div class="mod-chip" data-m="memory"><div class="mod-dot"></div>memory</div>
+    <div class="mod-chip" data-m="sensors"><div class="mod-dot"></div>sensors</div>
+    <div class="mod-chip" data-m="extensions"><div class="mod-dot"></div>extensions</div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat" id="chat" role="log" aria-live="polite"></div>
+
+  <!-- APP SEARCH BAR -->
+  <div class="config-bar" id="app-search-bar" style="gap:6px;">
+    <span class="config-label">APP SEARCH</span>
+    <input class="config-input" id="app-search-input" type="text" placeholder="search installed apps…" style="flex:1;" spellcheck="false" />
+    <button class="test-btn" id="app-search-btn">search</button>
+    <button class="test-btn" id="app-launch-btn" style="display:none;">launch</button>
+    <div id="app-search-results" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);max-height:200px;overflow-y:auto;z-index:50;font-family:var(--mono);font-size:11px;"></div>
+  </div>
+
+  <!-- QUICK ACTIONS -->
+  <div class="quick-row">
+    <button class="qa" onclick="sendQuick('Open terminal')">› open terminal</button>
+    <button class="qa" onclick="sendQuick('Search for browser apps')">search apps</button>
+    <button class="qa" onclick="sendQuick('Take a screenshot')">screenshot</button>
+    <button class="qa" onclick="startScreenRecordQuick()">record screen</button>
+    <button class="qa" onclick="sendQuick('Get system info')">sys info</button>
+    <button class="qa" onclick="sendQuick('Get clipboard contents')">clipboard</button>
+    <button class="qa" onclick="sendQuick('Get network info')">network</button>
+    <button class="qa" onclick="sendQuick('List running processes sorted by cpu')">processes</button>
+    <button class="qa" onclick="sendQuick('Set volume to 40%')">volume</button>
+    <button class="qa" onclick="sendQuick('Start focus routine for 25 minutes')">focus</button>
+    <button class="qa" onclick="sendQuick('Search Google for latest tech news')">🔍 web search</button>
+    <button class="qa" onclick="sendQuick('Get screen size and mouse position')">🖱️ screen info</button>
+    <button class="qa" onclick="sendQuick('What can you do?')">? help</button>
+  </div>
+
+  <!-- INPUT -->
+  <div class="input-bar">
+    <span class="prompt-label">NEXA&gt;</span>
+    <input type="text" id="user-input" placeholder="type a command or ask anything…" autocomplete="off" />
+    <button class="send-btn" id="send-btn" aria-label="Send">&#x27A4;</button>
+  </div>
+
+</div>
+
+<script>
+const SYSTEM_PROMPT = `You are NEXA — a modular, system-level personal assistant with FULL SYSTEM CONTROL on Windows, Linux, and macOS.
+
+IDENTITY: Precise, fast, proactive, technical, reliable. Tone: direct, confident, human-like, never robotic.
+
+MODULES: system_control, voice_interface, gesture_interface, automation, knowledge, memory, sensors, extensions
+
+SYSTEM_CONTROL ACTIONS:
+- open_app (name) — auto-searches entire system for the app
+- open_app_advanced (name, args, cwd, background)
+- search_apps (query, limit) — fuzzy search installed apps
+- list_installed_apps (category, limit)
+- open_with (path, app) — open file with specific app
+- close_app (name) / kill_process (pid|name, signal)
+- list_processes (limit, sort: cpu|memory|name)
+- execute_command (command, args, shell, background, timeout, cwd)
+- execute_pipe (command string with pipes)
+- open_file / open_directory / open_url (path/url)
+- create_file / read_file / delete_file / copy_file / move_file
+- list_directory (path, recursive, pattern) / create_directory / find_files (path, pattern)
+- get_file_info (path)
+- get_clipboard / set_clipboard (text)
+- screenshot (output) / record_screen (operation, duration_seconds)
+- set_volume (level) / get_volume / toggle_mute
+- set_brightness (level) / set_wallpaper (path)
+- get_network_info / get_wifi_networks / connect_wifi (ssid, password)
+- get_system_info / get_disk_usage / get_battery_info / get_uptime / get_user_info
+- set_environment_variable / get_environment_variable / list_environment_variables
+- manage_service (name, operation) / list_services
+- schedule_command (command, time, repeat) / notify (title, message, urgency)
+- power_action (type, force, delay_seconds) / lock_screen
+- web_search (query, num_results) / fetch_url (url) — search Google or read web pages
+- install_package (name, manager) — install via apt/winget/choco/brew/pip
+- create_script (path, content, executable) — create executable script files
+- type_text (text) / press_key (key) / hotkey (keys) — keyboard automation
+- mouse_click (x, y, button, clicks) / mouse_move (x, y) / mouse_scroll (amount) — mouse automation
+- get_mouse_position / get_screen_size — screen info
+
+SMART / WEB ACTIONS:
+- web_search (service, query) — search Google, YouTube, Spotify, Amazon, Reddit, GitHub, Wikipedia, Maps, eBay, Twitter/X, StackOverflow, npm, PyPI, news, images, translate, and 60+ services
+- open_website (site) — open Gmail, Discord, Netflix, Notion, Slack, WhatsApp, GitHub, etc.
+- multi_search (queries[]) — search multiple services at once (opens tabs)
+- smart_open (target) — intelligently open URL, website, app, file, or email
+- download (url, path) — download file from URL
+- fetch_text (url) — get text content of a web page
+- chain (steps[]) — execute multiple actions in sequence
+- list_web_services / list_websites — show available services
+
+AUTOMATION: start_routine, run_script, create_cron_job
+MEMORY: store_preference, get_preference, list_preferences, delete_preference, clear_memory
+VOICE: activate, speak (text, rate)
+
+RULES:
+- Info/explanation → plain text only.
+- Action → output ONLY a JSON block in triple backticks.
+- Gesture event → ONLY JSON.
+- Always respond in the user's language.
+- SAFETY: Ask confirmation before destructive actions.
+- "search on X for Y" / "look up Y on X" → web_search with service=X, query=Y
+- "play drake on spotify" → web_search service=spotify query=drake
+- "open gmail" / "go to discord" → open_website
+- Complex multi-step tasks → use chain action
+
+JSON FORMAT:
+\`\`\`json
+{"module":"<module>","action":"<action>","parameters":{...}}
+\`\`\`
+
+Examples:
+- "open calculator" → {"module":"system_control","action":"open_app","parameters":{"name":"Calculator"}}
+- "search browser apps" → {"module":"system_control","action":"search_apps","parameters":{"query":"browser"}}
+- "search on google amazon deals" → {"module":"system_control","action":"web_search","parameters":{"service":"google","query":"amazon deals"}}
+- "search on spotify drake" → {"module":"system_control","action":"web_search","parameters":{"service":"spotify","query":"drake"}}
+- "search on youtube python tutorial" → {"module":"system_control","action":"web_search","parameters":{"service":"youtube","query":"python tutorial"}}
+- "search on amazon wireless headphones" → {"module":"system_control","action":"web_search","parameters":{"service":"amazon","query":"wireless headphones"}}
+- "search on reddit best linux distro" → {"module":"system_control","action":"web_search","parameters":{"service":"reddit","query":"best linux distro"}}
+- "open gmail" → {"module":"system_control","action":"open_website","parameters":{"site":"gmail"}}
+- "open netflix" → {"module":"system_control","action":"open_website","parameters":{"site":"netflix"}}
+- "open discord" → {"module":"system_control","action":"open_website","parameters":{"site":"discord"}}
+- "translate hello to spanish" → {"module":"system_control","action":"web_search","parameters":{"service":"translate","query":"hello in spanish"}}
+- "find pizza places nearby" → {"module":"system_control","action":"web_search","parameters":{"service":"maps","query":"pizza places nearby"}}
+- "download file" → {"module":"system_control","action":"download","parameters":{"url":"https://example.com/file.pdf"}}
+- "copy clipboard" → {"module":"system_control","action":"get_clipboard","parameters":{}}
+- "lock screen" → {"module":"system_control","action":"lock_screen","parameters":{}}
+- "find pdf files" → {"module":"system_control","action":"find_files","parameters":{"path":"~/Documents","pattern":"\\.pdf$"}}
+- "system info" → {"module":"system_control","action":"get_system_info","parameters":{}}
+- "restart nginx" → {"module":"system_control","action":"manage_service","parameters":{"name":"nginx","operation":"restart"}}
+- "search Google for python tutorials" → {"module":"system_control","action":"web_search","parameters":{"service":"google","query":"python tutorials"}}
+- "read https://example.com" → {"module":"system_control","action":"fetch_url","parameters":{"url":"https://example.com"}}
+- "install htop" → {"module":"system_control","action":"install_package","parameters":{"name":"htop"}}
+- "create a bash script that backs up Documents" → {"module":"system_control","action":"create_script","parameters":{"path":"~/scripts/backup.sh","content":"#!/bin/bash\\ntar -czf ~/backup.tar.gz ~/Documents"}}
+- "press ctrl+s" → {"module":"system_control","action":"hotkey","parameters":{"keys":["ctrl","s"]}}
+- "click at 500 300" → {"module":"system_control","action":"mouse_click","parameters":{"x":500,"y":300}}`;
+
+
+// ── STATE ────────────────────────────────────────────────────────────
+let history = [];
+const chat      = document.getElementById('chat');
+const input     = document.getElementById('user-input');
+const sendBtn   = document.getElementById('send-btn');
+const voiceBtn  = document.getElementById('voice-btn');
+const statusLed = document.getElementById('status-led');
+const statusTxt = document.getElementById('status-text');
+const modelSel  = document.getElementById('model-select');
+const customMod = document.getElementById('custom-model');
+const urlInput  = document.getElementById('url-input');
+const DISPATCH_HOST = window.location.origin !== 'null' && !window.location.origin.startsWith('file') ? window.location.origin : 'http://127.0.0.1:11435';
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+let recognition = null;
+let voiceMode = false;
+let waitingForCommand = false;
+
+function getHost()  { return urlInput.value.trim().replace(/\/$/, ''); }
+function getModel() { return modelSel.value === 'custom' ? customMod.value.trim() : modelSel.value; }
+
+modelSel.addEventListener('change', () => {
+  customMod.style.display = modelSel.value === 'custom' ? 'block' : 'none';
+});
+
+// ── HELPERS ─────────────────────────────────────────────────────────
+function colorJSON(str) {
+  return str
+    .replace(/"([^"]+)":/g, '<span class="jk">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="js">"$1"</span>')
+    .replace(/: (\d+(?:\.\d+)?)/g, ': <span class="jn">$1</span>')
+    .replace(/: (true|false|null)/g, ': <span class="jb">$1</span>');
+}
+
+function extractJSON(text) {
+  const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (m) { try { return JSON.parse(m[1].trim()); } catch {} }
+  const t = text.trim();
+  if (t.startsWith('{')) { try { return JSON.parse(t); } catch {} }
+  return null;
+}
+
+function getSpeechableText(content) {
+  const match = content.match(/```(?:json)?\s*[\s\S]*?```/);
+  if (match) {
+    const before = content.slice(0, match.index).trim();
+    const after = content.slice(match.index + match[0].length).trim();
+    return before || after || 'Command executed.';
+  }
+  return content.trim();
+}
+
+function isPureJSONReply(text) {
+  const trimmed = text.trim();
+  const block = trimmed.match(/^```(?:json)?\s*([\s\S]*?)```$/);
+  if (block) {
+    try { JSON.parse(block[1].trim()); return true; } catch {};
+  }
+  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+    try { JSON.parse(trimmed); return true; } catch {};
+  }
+  return false;
+}
+
+function speakText(text) {
+  if (!text || !('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text.replace(/\n+/g, ' '));
+  utter.lang = 'en-US';
+  window.speechSynthesis.speak(utter);
+}
+
+function initVoiceRecognition() {
+  if (!SpeechRecognition) return;
+  if (recognition) return;
+
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.lang = 'en-US';
+
+  recognition.onresult = (event) => {
+    const transcript = Array.from(event.results)
+      .slice(event.resultIndex)
+      .map(r => r[0].transcript)
+      .join(' ')
+      .trim();
+    if (!transcript) return;
+    handleVoiceTranscript(transcript);
+  };
+
+  recognition.onend = () => {
+    if (voiceMode) {
+      setTimeout(() => recognition.start(), 200);
+    }
+  };
+
+  recognition.onerror = () => {
+    if (voiceMode) {
+      setTimeout(() => recognition.start(), 1000);
+    }
+  };
+}
+
+function handleVoiceTranscript(transcript) {
+  const text = transcript.trim();
+  if (!text) return;
+  const hasWake = /\bnexa\b/i.test(text);
+  if (hasWake) {
+    const commandText = text.replace(/\bnexa\b/gi, '').trim();
+    if (!commandText) {
+      addMsg('nexa', 'Listening for your command...');
+      speakText('Yes?');
+      waitingForCommand = true;
+      return;
+    }
+    waitingForCommand = false;
+    sendMessage(commandText);
+    return;
+  }
+  if (waitingForCommand) {
+    waitingForCommand = false;
+    sendMessage(text);
+  }
+}
+
+async function dispatchCommand(command) {
+  try {
+    const res = await fetch(`${DISPATCH_HOST}/dispatch`, {
+      method: 'POST',
+      mode: 'cors',
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(command)
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      return `Dispatch failed: ${data.error || 'HTTP ' + res.status}`;
+    }
+    return `Executed ${command.module}/${command.action}: ${data.result}`;
+  } catch (err) {
+    return `Dispatch failed: ${err.message}`;
+  }
+}
+
+function toggleVoiceMode() {
+  if (!SpeechRecognition) {
+    addMsg('nexa', 'Voice recognition is not supported in this browser.');
+    return;
+  }
+
+  voiceMode = !voiceMode;
+  voiceBtn.classList.toggle('active', voiceMode);
+  waitingForCommand = false;
+
+  if (voiceMode) {
+    initVoiceRecognition();
+    try { recognition.start(); } catch (e) { console.warn(e); }
+    addMsg('nexa', 'Voice mode activated. Say "NEXA" followed by your command.');
+    speakText('Voice mode activated. Say NEXA followed by your command.');
+  } else {
+    recognition?.stop();
+    addMsg('nexa', 'Voice mode deactivated.');
+  }
+}
+
+function activateModule(name) {
+  document.querySelectorAll('.mod-chip').forEach(c => c.classList.remove('active'));
+  const chip = document.querySelector(`.mod-chip[data-m="${name}"]`);
+  (chip || document.querySelector('.mod-chip[data-m="knowledge"]')).classList.add('active');
+}
+
+function setStatus(state) {
+  const labels = { listening:'LISTENING', processing:'PROCESSING', error:'OFFLINE', ok:'LISTENING' };
+  statusTxt.textContent = labels[state] || state.toUpperCase();
+  statusLed.className = 'status-led' + (state === 'error' ? ' error' : '');
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────
+function addMsg(role, content) {
+  const wrap = document.createElement('div');
+  wrap.className = `msg ${role}`;
+  const av = document.createElement('div');
+  av.className = `avatar ${role}`;
+  av.textContent = role === 'nexa' ? 'NX' : 'ME';
+  const bub = document.createElement('div');
+  bub.className = `bubble ${role}`;
+
+  if (role === 'nexa') {
+    renderNexaBubble(bub, content);
+  } else {
+    bub.textContent = content;
+  }
+
+  wrap.appendChild(av); wrap.appendChild(bub);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+  return { wrap, bub };
+}
+
+function renderNexaBubble(bub, content) {
+  bub.innerHTML = '';
+  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    const before = content.slice(0, jsonMatch.index).trim();
+    const jsonStr = jsonMatch[1].trim();
+    const after   = content.slice(jsonMatch.index + jsonMatch[0].length).trim();
+    try {
+      const parsed = JSON.parse(jsonStr);
+      activateModule(parsed.module);
+    } catch {}
+    if (!before && !after) {
+      bub.textContent = 'Command executed.';
+      return;
+    }
+    if (before) { const p = document.createElement('div'); p.innerHTML = before.replace(/\n/g,'<br>'); bub.appendChild(p); }
+    if (after) { const p2 = document.createElement('div'); p2.style.marginTop='8px'; p2.innerHTML = after.replace(/\n/g,'<br>'); bub.appendChild(p2); }
+  } else {
+    bub.innerHTML = content.replace(/\n/g, '<br>');
+    activateModule('knowledge');
+  }
+}
+
+function addTyping() {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg nexa';
+  const av = document.createElement('div'); av.className = 'avatar nexa'; av.textContent = 'NX';
+  const bub = document.createElement('div'); bub.className = 'typing-bub';
+  bub.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  wrap.appendChild(av); wrap.appendChild(bub);
+  chat.appendChild(wrap); chat.scrollTop = chat.scrollHeight;
+  return wrap;
+}
+
+// ── OLLAMA STREAMING SEND ────────────────────────────────────────────
+async function sendMessage(text) {
+  text = text.trim();
+  if (!text) return;
+
+  addMsg('user', text);
+  history.push({ role: 'user', content: text });
+  input.value = ''; sendBtn.disabled = true;
+  setStatus('processing');
+
+  // Build Ollama message array with system prompt injected
+  const messages = [
+    { role: 'system', content: SYSTEM_PROMPT },
+    ...history
+  ];
+
+  const typing = addTyping();
+  let fullReply = '';
+
+  try {
+    const res = await fetch(`${getHost()}/api/chat`, {
+      method: 'POST',
+      mode: 'cors',
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: getModel(),
+        messages,
+        stream: true,
+        options: { temperature: 0.3 }
+      })
+    });
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    typing.remove();
+
+    // Create streaming bubble
+    const wrapEl = document.createElement('div');
+    wrapEl.className = 'msg nexa';
+    const avEl = document.createElement('div'); avEl.className = 'avatar nexa'; avEl.textContent = 'NX';
+    const bubEl = document.createElement('div'); bubEl.className = 'bubble nexa stream-cursor';
+    wrapEl.appendChild(avEl); wrapEl.appendChild(bubEl);
+    chat.appendChild(wrapEl);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const lines = decoder.decode(value, { stream: true }).split('\n').filter(Boolean);
+      for (const line of lines) {
+        try {
+          const data = JSON.parse(line);
+          if (data.message && data.message.content) {
+            fullReply += data.message.content;
+            // Live render plain text; defer JSON rendering until done
+            bubEl.innerHTML = fullReply.replace(/\n/g, '<br>');
+            chat.scrollTop = chat.scrollHeight;
+          }
+          if (data.done) break;
+        } catch {}
+      }
+    }
+
+    // Final render with JSON highlighting
+    bubEl.classList.remove('stream-cursor');
+    renderNexaBubble(bubEl, fullReply);
+    history.push({ role: 'assistant', content: fullReply });
+    setStatus('listening');
+
+    const command = extractJSON(fullReply);
+    if (command && command.module) {
+      const dispatchNote = await dispatchCommand(command);
+      if (voiceMode) speakText(dispatchNote);
+    }
+
+    const speechMessage = getSpeechableText(fullReply);
+    if (voiceMode) {
+      speakText(speechMessage);
+      if (isPureJSONReply(fullReply)) {
+        wrapEl.style.display = 'none';
+      }
+    }
+
+  } catch (err) {
+    typing.remove();
+    const errText = err.message.includes('Failed to fetch') || err.message.includes('NetworkError')
+      ? `❌ No se puede conectar con Ollama en <code>${getHost()}</code>.\n\n` +
+        `Reinicia Ollama con CORS habilitado:\n\n` +
+        `<b>Linux/Mac:</b> <code>OLLAMA_ORIGINS=* ollama serve</code>\n` +
+        `<b>Windows PS:</b> <code>$env:OLLAMA_ORIGINS="*"; ollama serve</code>`
+      : `Error: ${err.message}`;
+    const { bub } = addMsg('nexa', '');
+    bub.innerHTML = `<span class="error-msg">${errText}</span>`;
+    setStatus('error');
+  }
+
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+function sendQuick(text) { input.value = text; sendMessage(text); }
+
+// ── CONNECTION TEST ──────────────────────────────────────────────────
+document.getElementById('test-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('test-btn');
+  btn.textContent = '⏳ testing…';
+  const host = getHost();
+  try {
+    const res = await fetch(`${host}/api/tags`, {
+      method: 'GET',
+      mode: 'cors',
+      cache: 'no-cache',
+      headers: { 'Accept': 'application/json' }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const models = (data.models || []).map(m => m.name);
+    setStatus('listening');
+    addMsg('nexa', `✅ Ollama conectado en <code>${host}</code>\n\nModelos disponibles:\n${models.map(m=>'• '+m).join('\n') || '(ninguno — ejecuta: ollama pull llama3)'}`);
+    if (models.length) {
+      modelSel.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('') + '<option value="custom">custom…</option>';
+    }
+    btn.textContent = '✓ conectado';
+    setTimeout(() => btn.textContent = '⚡ test connection', 2000);
+  } catch (err) {
+    setStatus('error');
+    const isCors = err.message.includes('fetch') || err.message.includes('Failed') || err.message.includes('NetworkError');
+    const msg = isCors
+      ? `❌ No se puede conectar a Ollama en <code>${host}</code>\n\n` +
+        `<b>Causa más probable: CORS no habilitado.</b>\n\n` +
+        `Detén Ollama y reinícialo con:\n\n` +
+        `<b>Linux/Mac:</b>\n<code>OLLAMA_ORIGINS=* ollama serve</code>\n\n` +
+        `<b>Windows (PowerShell):</b>\n<code>$env:OLLAMA_ORIGINS="*"; ollama serve</code>\n\n` +
+        `<b>Windows (CMD):</b>\n<code>set OLLAMA_ORIGINS=* && ollama serve</code>\n\n` +
+        `Si usas Chrome, también prueba abrir el HTML desde un servidor local:\n<code>python -m http.server 8080</code>`
+      : `❌ Error: ${err.message}`;
+    addMsg('nexa', `<span class="error-msg">${msg}</span>`);
+    btn.textContent = '✗ failed';
+    setTimeout(() => btn.textContent = '⚡ test connection', 2000);
+  }
+});
+
+// ── SCREEN RECORDING ─────────────────────────────────────────────────
+let mediaRecorder = null;
+let recordedChunks = [];
+let recTimerInterval = null;
+let recSeconds = 0;
+const recordBtn = document.getElementById('record-btn');
+const recIndicator = document.getElementById('rec-indicator');
+const recTimerEl = document.getElementById('rec-timer');
+
+function formatTime(s) {
+  const m = Math.floor(s / 60).toString().padStart(2, '0');
+  const sec = (s % 60).toString().padStart(2, '0');
+  return `REC ${m}:${sec}`;
+}
+
+async function startScreenRecordQuick() {
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    stopScreenRecord();
+  } else {
+    await startScreenRecord();
+  }
+}
+
+async function startScreenRecord() {
+  try {
+    // Request screen capture with audio
+    const displayStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { frameRate: 30, cursor: 'always' },
+      audio: true
+    });
+
+    // Also try to capture microphone audio and mix it
+    let combinedStream = displayStream;
+    try {
+      const micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      const audioContext = new AudioContext();
+      const dest = audioContext.createMediaStreamDestination();
+      if (displayStream.getAudioTracks().length > 0) {
+        audioContext.createMediaStreamSource(displayStream).connect(dest);
+      }
+      audioContext.createMediaStreamSource(micStream).connect(dest);
+      combinedStream = new MediaStream([
+        ...displayStream.getVideoTracks(),
+        ...dest.stream.getAudioTracks()
+      ]);
+    } catch (micErr) {
+      // Mic not available — record screen only, that's fine
+    }
+
+    recordedChunks = [];
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+      ? 'video/webm;codecs=vp9,opus'
+      : MediaRecorder.isTypeSupported('video/webm')
+      ? 'video/webm'
+      : '';
+
+    mediaRecorder = new MediaRecorder(combinedStream, mimeType ? { mimeType } : {});
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = saveRecording;
+
+    // Stop when user stops sharing from browser UI
+    displayStream.getVideoTracks()[0].onended = () => stopScreenRecord();
+
+    mediaRecorder.start(1000); // collect chunks every second
+
+    recSeconds = 0;
+    recIndicator.classList.add('active');
+    recordBtn.classList.add('recording');
+    recordBtn.title = 'Detener grabación';
+    recTimerInterval = setInterval(() => {
+      recSeconds++;
+      recTimerEl.textContent = formatTime(recSeconds);
+    }, 1000);
+
+    addMsg('nexa', '⏺ Grabación de pantalla iniciada. Pulsa ⏺ de nuevo para detener y guardar.');
+  } catch (err) {
+    if (err.name === 'NotAllowedError') {
+      addMsg('nexa', '<span class="error-msg">Permiso denegado para grabar pantalla. Acepta el permiso cuando el navegador te lo pida.</span>');
+    } else {
+      addMsg('nexa', `<span class="error-msg">Error al iniciar grabación: ${err.message}</span>`);
+    }
+  }
+}
+
+function stopScreenRecord() {
+  if (!mediaRecorder) return;
+  mediaRecorder.stop();
+  mediaRecorder.stream.getTracks().forEach(t => t.stop());
+  clearInterval(recTimerInterval);
+  recIndicator.classList.remove('active');
+  recordBtn.classList.remove('recording');
+  recordBtn.title = 'Grabar pantalla';
+  addMsg('nexa', `⏹ Grabación detenida (${formatTime(recSeconds)}). Guardando archivo…`);
+}
+
+function saveRecording() {
+  const blob = new Blob(recordedChunks, { type: 'video/webm' });
+  const url = URL.createObjectURL(blob);
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `nexa_recording_${ts}.webm`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  addMsg('nexa', `✅ Grabación guardada: nexa_recording_${ts}.webm`);
+  mediaRecorder = null;
+}
+
+recordBtn.addEventListener('click', startScreenRecordQuick);
+
+// ── GESTURE ENGINE (MediaPipe Hands via CDN) ──────────────────────────
+let gestureActive = false;
+let gestureStream = null;
+let gestureAnimFrame = null;
+let lastGestureTime = 0;
+const GESTURE_COOLDOWN = 1500;
+const gesturePanel = document.getElementById('gesture-panel');
+const gestureVideo = document.getElementById('gesture-video');
+const gestureCanvas = document.getElementById('gesture-canvas');
+const gestureLbl = document.getElementById('gesture-label');
+const gestureBtn2 = document.getElementById('gesture-btn');
+let handsModel = null;
+let prevWristX = null;
+
+function loadMediaPipe() {
+  return new Promise((resolve, reject) => {
+    if (window.Hands) { resolve(); return; }
+    const s1 = document.createElement('script');
+    s1.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js';
+    const s2 = document.createElement('script');
+    s2.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js';
+    s2.onload = resolve;
+    s2.onerror = reject;
+    document.head.appendChild(s1);
+    document.head.appendChild(s2);
+  });
+}
+
+async function toggleGestures() {
+  if (gestureActive) {
+    stopGestures();
+  } else {
+    await startGestures();
+  }
+}
+
+async function startGestures() {
+  try {
+    gestureStream = await navigator.mediaDevices.getUserMedia({
+      video: { width: 220, height: 140, facingMode: 'user' },
+      audio: false
+    });
+  } catch (err) {
+    if (err.name === 'NotAllowedError') {
+      addMsg('nexa', '<span class="error-msg">Permiso de cámara denegado. Ve a la configuración del navegador y permite el acceso a la cámara.</span>');
+    } else {
+      addMsg('nexa', `<span class="error-msg">No se pudo acceder a la cámara: ${err.message}</span>`);
+    }
+    return;
+  }
+
+  gestureVideo.srcObject = gestureStream;
+  gesturePanel.classList.add('active');
+  gestureBtn2.classList.add('active');
+  gestureActive = true;
+
+  // Try loading MediaPipe
+  try {
+    await loadMediaPipe();
+    if (window.Hands) {
+      handsModel = new Hands({
+        locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
+      });
+      handsModel.setOptions({
+        maxNumHands: 1,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.75,
+        minTrackingConfidence: 0.6
+      });
+      handsModel.onResults(onHandResults);
+      startGestureLoop();
+      addMsg('nexa', '✋ Motor de gestos activado con MediaPipe. Gestos disponibles: puño, mano abierta, pulgar arriba, señalar, deslizar.');
+    }
+  } catch {
+    // MediaPipe no disponible — usar detección simplificada de movimiento
+    addMsg('nexa', '✋ Cámara activada. MediaPipe no disponible (sin internet), usando detección básica de movimiento.');
+    startSimpleGestureLoop();
+  }
+}
+
+function stopGestures() {
+  gestureActive = false;
+  if (gestureStream) gestureStream.getTracks().forEach(t => t.stop());
+  gesturePanel.classList.remove('active');
+  gestureBtn2.classList.remove('active');
+  if (gestureAnimFrame) cancelAnimationFrame(gestureAnimFrame);
+  handsModel = null;
+  prevWristX = null;
+  gestureLbl.textContent = '— apunta con la cámara —';
+}
+
+function startGestureLoop() {
+  async function loop() {
+    if (!gestureActive) return;
+    if (gestureVideo.readyState >= 2) {
+      await handsModel.send({ image: gestureVideo });
+    }
+    gestureAnimFrame = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+// Fallback: simple motion detection without MediaPipe
+let prevFrame = null;
+function startSimpleGestureLoop() {
+  const ctx = gestureCanvas.getContext('2d');
+  function loop() {
+    if (!gestureActive) return;
+    gestureCanvas.width = gestureVideo.videoWidth || 220;
+    gestureCanvas.height = gestureVideo.videoHeight || 140;
+    ctx.drawImage(gestureVideo, 0, 0, gestureCanvas.width, gestureCanvas.height);
+    gestureAnimFrame = requestAnimationFrame(loop);
+  }
+  loop();
+}
+
+function onHandResults(results) {
+  const ctx = gestureCanvas.getContext('2d');
+  gestureCanvas.width = gestureVideo.videoWidth;
+  gestureCanvas.height = gestureVideo.videoHeight;
+  ctx.clearRect(0, 0, gestureCanvas.width, gestureCanvas.height);
+
+  if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+    prevWristX = null;
+    gestureLbl.textContent = '— sin mano detectada —';
+    return;
+  }
+
+  const lm = results.multiHandLandmarks[0];
+
+  // Draw skeleton
+  if (window.drawConnectors && window.HAND_CONNECTIONS) {
+    drawConnectors(ctx, lm, HAND_CONNECTIONS, { color: '#7f6af8', lineWidth: 2 });
+    drawLandmarks(ctx, lm, { color: '#a594ff', lineWidth: 1, radius: 3 });
+  }
+
+  const gesture = classifyGesture(lm);
+  const wristX = lm[0].x;
+
+  const now = Date.now();
+  if (gesture && (now - lastGestureTime) > GESTURE_COOLDOWN) {
+    lastGestureTime = now;
+    gestureLbl.textContent = `✊ ${gesture.toUpperCase()}`;
+
+    const GESTURE_MAP = {
+      swipe_left:  { module: 'gesture_interface', action: 'navigate',  parameters: { direction: 'left' } },
+      swipe_right: { module: 'gesture_interface', action: 'navigate',  parameters: { direction: 'right' } },
+      thumbs_up:   { module: 'gesture_interface', action: 'confirm',   parameters: { gesture: 'thumbs_up' } },
+      closed_fist: { module: 'gesture_interface', action: 'cancel',    parameters: { gesture: 'closed_fist' } },
+      open_hand:   { module: 'gesture_interface', action: 'pause',     parameters: { gesture: 'open_hand' } },
+      point:       { module: 'gesture_interface', action: 'select',    parameters: { gesture: 'point' } },
+    };
+    const cmd = GESTURE_MAP[gesture];
+    if (cmd) {
+      addMsg('nexa', `👋 Gesto detectado: **${gesture}** → enviado al dispatcher`);
+      dispatchCommand(cmd);
+    }
+  } else if (!gesture) {
+    gestureLbl.textContent = '— mano detectada —';
+  }
+
+  prevWristX = wristX;
+}
+
+function fingerExtended(lm, tip, pip) { return lm[tip].y < lm[pip].y; }
+
+function classifyGesture(lm) {
+  const indexUp  = fingerExtended(lm, 8, 6);
+  const middleUp = fingerExtended(lm, 12, 10);
+  const ringUp   = fingerExtended(lm, 16, 14);
+  const pinkyUp  = fingerExtended(lm, 20, 18);
+  const thumbUp  = lm[4].y < lm[3].y;
+  const fingersUp = [indexUp, middleUp, ringUp, pinkyUp].filter(Boolean).length;
+
+  if (fingersUp === 0 && !thumbUp)         return 'closed_fist';
+  if (fingersUp >= 3 && thumbUp)           return 'open_hand';
+  if (thumbUp && fingersUp === 0)          return 'thumbs_up';
+  if (indexUp && !middleUp && !ringUp && !pinkyUp) return 'point';
+
+  if (prevWristX !== null) {
+    const delta = lm[0].x - prevWristX;
+    if (delta < -0.06) return 'swipe_left';
+    if (delta > 0.06)  return 'swipe_right';
+  }
+  return null;
+}
+
+document.getElementById('gesture-btn').addEventListener('click', toggleGestures);
+
+// ── EVENTS ───────────────────────────────────────────────────────────
+sendBtn.addEventListener('click', () => sendMessage(input.value));
+input.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input.value); } });
+voiceBtn.addEventListener('click', toggleVoiceMode);
+if (!SpeechRecognition) {
+  voiceBtn.title = 'Voz no soportada en este navegador';
+}
+
+// ── APP SEARCH (uses dispatch server /search endpoint) ───────────────
+const appSearchInput = document.getElementById('app-search-input');
+const appSearchBtn = document.getElementById('app-search-btn');
+const appSearchResults = document.getElementById('app-search-results');
+const appLaunchBtn = document.getElementById('app-launch-btn');
+let selectedApp = null;
+
+async function searchApps() {
+  const q = appSearchInput.value.trim();
+  if (!q) return;
+  appSearchResults.innerHTML = '<div style="padding:8px;color:var(--text3);">Searching...</div>';
+  appSearchResults.style.display = 'block';
+  try {
+    const res = await fetch(`${DISPATCH_HOST}/search?q=${encodeURIComponent(q)}&limit=8`);
+    const data = await res.json();
+    if (!data.results || data.results.length === 0) {
+      appSearchResults.innerHTML = '<div style="padding:8px;color:var(--text3);">No apps found</div>';
+      appLaunchBtn.style.display = 'none';
+      return;
+    }
+    appSearchResults.innerHTML = data.results.map((r, i) =>
+      `<div class="app-result" data-idx="${i}" data-name="${r.name}" data-exec="${r.exec}" style="padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;"
+           onmouseover="this.style.background='var(--accent-glow)'" onmouseout="this.style.background='transparent'">
+        <span style="color:var(--text);">${r.name}</span>
+        <span style="color:var(--text3);font-size:10px;">${r.source} · score ${r.score}</span>
+      </div>`
+    ).join('');
+    // Click to select
+    appSearchResults.querySelectorAll('.app-result').forEach(el => {
+      el.addEventListener('click', () => {
+        selectedApp = { name: el.dataset.name, exec: el.dataset.exec };
+        appSearchInput.value = el.dataset.name;
+        appSearchResults.style.display = 'none';
+        appLaunchBtn.style.display = 'inline-block';
+      });
+    });
+  } catch (err) {
+    appSearchResults.innerHTML = `<div style="padding:8px;color:var(--red);">Dispatch server not running? Start with: python nexa_dispatch_server.py</div>`;
+  }
+}
+
+appSearchBtn.addEventListener('click', searchApps);
+appSearchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') searchApps();
+});
+
+appLaunchBtn.addEventListener('click', async () => {
+  if (!selectedApp) return;
+  const cmd = { module: 'system_control', action: 'open_app', parameters: { name: selectedApp.name } };
+  const result = await dispatchCommand(cmd);
+  addMsg('nexa', `Launched: ${selectedApp.name}\n${result}`);
+  appLaunchBtn.style.display = 'none';
+  selectedApp = null;
+});
+
+// Hide results when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('#app-search-bar')) {
+    appSearchResults.style.display = 'none';
+  }
+});
+
+// ── BOOT ─────────────────────────────────────────────────────────────
+addMsg('nexa', 'NEXA v2.0 online · Full System Control · Ollama local.\n\n⚡ Click "test connection" to connect to Ollama and load models.\n🔍 Use the APP SEARCH bar above to find any app installed on your system.\n🎙 Click the mic for voice mode → say "NEXA" followed by your command.\n✋ Click the hand to activate gesture controls.\n⏺ Click the red circle to record your screen.\n\n50 system actions available: apps, files, clipboard, network, services, scheduling, and more.\nEverything runs locally. No API keys, no internet required.');
+setStatus('listening');
+
+// Auto-probe Ollama on load
+(async () => {
+  try {
+    const r = await fetch(`${getHost()}/api/tags`, { mode: 'cors', cache: 'no-cache' });
+    if (r.ok) {
+      const d = await r.json();
+      const models = (d.models || []).map(m => m.name);
+      if (models.length) {
+        modelSel.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('') + '<option value="custom">custom…</option>';
+        addMsg('nexa', `✅ Ollama detectado automáticamente. Modelos: ${models.join(', ')}`);
+      } else {
+        addMsg('nexa', `⚠️ Ollama conectado pero sin modelos. Ejecuta: <code>ollama pull llama3</code>`);
+      }
+      setStatus('listening');
+    }
+  } catch {
+    // silent — user will click test button manually
+  }
+})();
+</script>
+</body>
+</html>
