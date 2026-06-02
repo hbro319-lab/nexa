@@ -21,8 +21,8 @@ import requests
 from nexa_dispatcher import dispatch
 
 # -- LOAD CONFIG ----------------------------------------------------------
-def _find_config():
-    """Locate nexa_config.json — check exe dir, then bundle dir, then cwd."""
+def _load_config():
+    """Load config: try external files first, fall back to embedded default."""
     candidates = ["nexa_config.json"]
     exe_dir = os.environ.get("NEXA_EXE_DIR", "")
     bundle_dir = os.environ.get("NEXA_BUNDLE_DIR", "")
@@ -30,18 +30,22 @@ def _find_config():
         candidates.insert(0, os.path.join(exe_dir, "nexa_config.json"))
     if bundle_dir:
         candidates.append(os.path.join(bundle_dir, "nexa_config.json"))
-    # Also check next to this .py file (for non-frozen runs)
     candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "nexa_config.json"))
     for path in candidates:
         if os.path.isfile(path):
-            return path
-    raise FileNotFoundError(
-        f"nexa_config.json not found. Searched: {candidates}\n"
-        "Place nexa_config.json next to the executable or in the current directory."
-    )
+            with open(path) as f:
+                return json.load(f)
+    # Fall back to embedded default config
+    try:
+        from nexa_assets import get_default_config
+        return get_default_config()
+    except ImportError:
+        raise FileNotFoundError(
+            "nexa_config.json not found and no embedded config available.\n"
+            "Place nexa_config.json next to the executable or in the current directory."
+        )
 
-with open(_find_config()) as f:
-    CONFIG = json.load(f)
+CONFIG = _load_config()
 
 OLLAMA_HOST = CONFIG["ollama"]["host"]
 MODEL       = CONFIG["ollama"]["model"]

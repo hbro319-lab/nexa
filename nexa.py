@@ -132,18 +132,22 @@ def run_search(query):
 
 def run_gui():
     """Open the web UI in the default browser and start the server."""
-    # Check exe dir first, then bundle dir
-    for d in [EXE_DIR, BUNDLE_DIR, BASE_DIR]:
-        html_path = os.path.join(d, "nexa_interface.html")
-        if os.path.exists(html_path):
-            print(f"[NEXA] Opening web UI: {html_path}")
-            webbrowser.open(f"file://{os.path.abspath(html_path)}")
-            break
-    else:
-        print(f"[WARN] nexa_interface.html not found. Copy it next to the executable.")
+    # Start server in a background thread, then open browser to localhost
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
 
-    print("[NEXA] Starting dispatch server for the web UI...")
-    run_server()
+    import time
+    time.sleep(0.5)  # Give the server a moment to start
+
+    url = "http://127.0.0.1:11435/"
+    print(f"[NEXA] Opening web UI: {url}")
+    webbrowser.open(url)
+
+    # Keep main thread alive
+    try:
+        server_thread.join()
+    except KeyboardInterrupt:
+        print("\nNEXA offline.")
 
 
 def main():

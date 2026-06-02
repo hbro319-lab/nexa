@@ -44,8 +44,8 @@ if exist "dist\nexa.exe" (
     echo    dist\nexa.exe --gui             Open web UI + server
     echo    dist\nexa.exe --search "chrome" Search installed apps
     echo.
-    echo  IMPORTANT: Copy nexa_interface.html and nexa_config.json
-    echo  to the same folder as nexa.exe for full functionality.
+    echo  Everything is embedded in the .exe — no extra files needed!
+    echo  Just run nexa.exe from anywhere.
     echo.
 ) else (
     echo.

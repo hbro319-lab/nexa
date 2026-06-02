@@ -37,13 +37,8 @@ if [ -f "dist/nexa" ]; then
     echo "    ./dist/nexa --gui             Open web UI + server"
     echo "    ./dist/nexa --search 'chrome' Search installed apps"
     echo ""
-    echo "  Copy nexa_interface.html and nexa_config.json"
-    echo "  to the same folder as the binary for full functionality."
-    echo ""
-    # Copy required data files
-    cp nexa_interface.html dist/ 2>/dev/null || true
-    cp nexa_config.json dist/ 2>/dev/null || true
-    echo "  Data files copied to dist/"
+    echo "  Everything is embedded — no extra files needed!"
+    echo "  Just run ./dist/nexa from anywhere."
 else
     echo ""
     echo "  [ERROR] Build failed. Check the output above."

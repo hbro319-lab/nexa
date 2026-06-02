@@ -9,11 +9,8 @@ import sys
 
 block_cipher = None
 
-# Collect all NEXA source files as data
-datas = [
-    ('nexa_config.json', '.'),
-    ('nexa_interface.html', '.'),
-]
+# No external data files needed — everything is embedded in nexa_assets.py
+datas = []
 
 # Hidden imports that PyInstaller might miss
 hiddenimports = [
@@ -21,6 +18,7 @@ hiddenimports = [
     'nexa_api_bridge',
     'nexa_app_finder',
     'nexa_dispatch_server',
+    'nexa_assets',
     'psutil',
     'requests',
     'json',
