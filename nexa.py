@@ -40,7 +40,8 @@ os.environ['NEXA_EXE_DIR'] = EXE_DIR
 
 def run_cli():
     """Launch the interactive CLI (nexa_api_bridge)."""
-    from nexa_api_bridge import NexaSession, check_ollama, SYSTEM_PROMPT, app_index
+    from nexa_api_bridge import NexaSession, check_ollama, SYSTEM_PROMPT
+    from nexa_app_finder import app_index
     import requests
 
     print("+" + "=" * 42 + "+")
