@@ -26,6 +26,12 @@ except ImportError:
     psutil = None
 
 from nexa_app_finder import app_index, AppEntry
+from nexa_smart_actions import (
+    web_search, open_website, multi_search, smart_open,
+    download_url, web_scrape_text, chain_actions,
+    list_web_services, list_direct_sites,
+    WEB_SERVICES, DIRECT_URLS,
+)
 
 SYSTEM = platform.system()  # 'Darwin', 'Windows', 'Linux'
 
@@ -1313,6 +1319,62 @@ def handle_system_control(action, params):
             return f"Opening {file_path} with {app_name}"
         except Exception as e:
             return f"Error: {e}"
+
+    # ------------------------------------------------------------------
+    # SMART / WEB ACTIONS
+    # ------------------------------------------------------------------
+
+    elif action == "web_search":
+        service = params.get("service", "google")
+        query = params.get("query", "")
+        if not query:
+            return "Missing 'query' parameter"
+        return web_search(service, query)
+
+    elif action == "open_website":
+        site = params.get("site", params.get("name", params.get("url", "")))
+        if not site:
+            return "Missing 'site' parameter"
+        return open_website(site)
+
+    elif action == "multi_search":
+        queries = params.get("queries", [])
+        if not queries:
+            return "Missing 'queries' parameter (list of {service, query})"
+        return multi_search(queries)
+
+    elif action == "smart_open":
+        target = params.get("target", params.get("url", params.get("name", "")))
+        if not target:
+            return "Missing 'target' parameter"
+        return smart_open(target)
+
+    elif action == "download":
+        url = params.get("url", "")
+        save_path = params.get("path", params.get("save_path", ""))
+        if not url:
+            return "Missing 'url' parameter"
+        return download_url(url, save_path)
+
+    elif action == "fetch_text":
+        url = params.get("url", "")
+        if not url:
+            return "Missing 'url' parameter"
+        return web_scrape_text(url)
+
+    elif action == "chain":
+        steps = params.get("steps", [])
+        if not steps:
+            return "Missing 'steps' parameter (list of command dicts)"
+        return chain_actions(steps)
+
+    elif action == "list_web_services":
+        services = list_web_services()
+        return f"Available services ({len(services)}): " + ", ".join(services)
+
+    elif action == "list_websites":
+        sites = list_direct_sites()
+        return f"Known websites ({len(sites)}): " + ", ".join(sites)
 
     return f"Unknown system_control action: {action}"
 

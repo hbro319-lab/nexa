@@ -18,6 +18,7 @@ hiddenimports = [
     'nexa_api_bridge',
     'nexa_app_finder',
     'nexa_dispatch_server',
+    'nexa_smart_actions',
     'nexa_assets',
     'psutil',
     'requests',
