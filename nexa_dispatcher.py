@@ -343,6 +343,30 @@ def handle_system_control(action, params):
         count = app_index.refresh(force=True)
         return f"App index refreshed: {count} applications indexed"
 
+    elif action == "find_and_open_app":
+        """Search for an app; open it if found, otherwise install then open."""
+        name = params.get("name", "")
+        if not name:
+            return "Error: 'name' parameter required"
+        # 1. Search locally
+        results = app_index.search(name, limit=5)
+        if results:
+            best, score = results[0]
+            open_result = _open_app_smart(best.name)
+            return f"Found '{best.name}' (score={score:.0f}). {open_result}"
+        # 2. Not found — try to install
+        install_result = handle_system_control(
+            "install_package", {"name": name, "manager": "auto"}
+        )
+        # 3. Refresh index and try to open
+        app_index.refresh(force=True)
+        results = app_index.search(name, limit=3)
+        if results:
+            best, score = results[0]
+            open_result = _open_app_smart(best.name)
+            return f"{install_result}\n{open_result}"
+        return f"{install_result}\nNote: installed but could not auto-open. Try: open_app"
+
     # ── COMMAND EXECUTION ─────────────────────────────────────────
 
     elif action == "execute_command":

@@ -423,7 +423,8 @@ SYSTEM_CONTROL ACTIONS:
 - get_mouse_position / get_screen_size — screen info
 
 SMART / WEB ACTIONS:
-- web_search (service, query) — search Google, YouTube, Spotify, Amazon, Reddit, GitHub, Wikipedia, Maps, eBay, Twitter/X, StackOverflow, npm, PyPI, news, images, translate, and 60+ services
+- web_search (service, query) — search Google, YouTube, Spotify, Amazon, Reddit, GitHub, Wikipedia, Maps, eBay, Twitter/X, StackOverflow, npm, PyPI, news, images, translate, and 60+ services (OPENS BROWSER)
+- find_and_open_app (name) — search for app locally, open if found, auto-install + open if missing
 - open_website (site) — open Gmail, Discord, Netflix, Notion, Slack, WhatsApp, GitHub, etc.
 - multi_search (queries[]) — search multiple services at once (opens tabs)
 - smart_open (target) — intelligently open URL, website, app, file, or email
@@ -442,9 +443,15 @@ RULES:
 - Gesture event → ONLY JSON.
 - Always respond in the user's language.
 - SAFETY: Ask confirmation before destructive actions.
-- "search on X for Y" / "look up Y on X" → web_search with service=X, query=Y
-- "play drake on spotify" → web_search service=spotify query=drake
-- "open gmail" / "go to discord" → open_website
+
+COMMAND ROUTING — SEARCH INTENT:
+1. "Search on Google/YouTube/etc for Y" → web_search (opens browser with search)
+   "search on google for X", "google X", "look up X on Y" → web_search(service, query)
+2. "Search for app X" / "find app X" / "I need X app" → find_and_open_app
+   Searches locally, opens if found, auto-installs and opens if missing.
+3. "Open gmail" / "go to discord" → open_website (opens known site directly)
+4. "Play drake on spotify" → web_search(service=spotify, query=drake)
+5. Unsure if app or website? → smart_open (auto-detects)
 - Complex multi-step tasks → use chain action
 
 JSON FORMAT:
@@ -473,6 +480,9 @@ Examples:
 - "restart nginx" → {"module":"system_control","action":"manage_service","parameters":{"name":"nginx","operation":"restart"}}
 - "search Google for python tutorials" → {"module":"system_control","action":"web_search","parameters":{"service":"google","query":"python tutorials"}}
 - "read https://example.com" → {"module":"system_control","action":"fetch_url","parameters":{"url":"https://example.com"}}
+- "search for VLC" → {"module":"system_control","action":"find_and_open_app","parameters":{"name":"vlc"}}
+- "I need a text editor" → {"module":"system_control","action":"find_and_open_app","parameters":{"name":"text editor"}}
+- "find gimp" → {"module":"system_control","action":"find_and_open_app","parameters":{"name":"gimp"}}
 - "install htop" → {"module":"system_control","action":"install_package","parameters":{"name":"htop"}}
 - "create a bash script that backs up Documents" → {"module":"system_control","action":"create_script","parameters":{"path":"~/scripts/backup.sh","content":"#!/bin/bash\\ntar -czf ~/backup.tar.gz ~/Documents"}}
 - "press ctrl+s" → {"module":"system_control","action":"hotkey","parameters":{"keys":["ctrl","s"]}}

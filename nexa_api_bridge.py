@@ -294,11 +294,29 @@ RULES
   the dispatcher will automatically search the entire system for the best match.
 - For piped commands like "ls | grep ..." use execute_pipe.
 - For file search use find_files.
-- When user says "search on X for Y" / "look up Y on X" / "find Y on X", use web_search with service=X, query=Y.
-- When user says "open gmail" / "go to discord" / "open netflix", use open_website.
+
+COMMAND ROUTING — SEARCH INTENT:
+The word "search" can mean different things. Follow these rules carefully:
+
+1. "Search on Google/YouTube/etc for Y" → web_search (opens browser with search results)
+   Triggers: "search on <service>", "google X", "look up X on Y", "find X on Y"
+   Use: web_search with service=<service>, query=Y
+   Examples: "search on Google for python tutorials" → web_search(service=google, query=python tutorials)
+             "search YouTube for music" → web_search(service=youtube, query=music)
+             "google how to cook pasta" → web_search(service=google, query=how to cook pasta)
+
+2. "Search for app X" / "find app X" / "I need X app" → find_and_open_app
+   Triggers: "search for <app>", "find <app> app", "I need <app>", "open <app>" (when app is not installed)
+   Use: find_and_open_app with name=X (searches locally, opens if found, installs if missing)
+   Examples: "search for VLC" → find_and_open_app(name=VLC)
+             "I need a text editor" → find_and_open_app(name=text editor)
+             "find gimp" → find_and_open_app(name=gimp)
+
+3. "Open gmail" / "go to discord" → open_website (opens known site directly)
+4. "Play drake on spotify" / "watch tutorials on youtube" → web_search with that service
+5. If unsure whether something is an app or website, use smart_open which figures it out.
+
 - For complex multi-step tasks, use chain to execute multiple actions in sequence.
-- For "play drake on spotify", "watch tutorials on youtube", "buy shoes on amazon" -> use web_search.
-- If unsure whether something is an app or website, use smart_open which figures it out.
 - When asked to read a web page, use fetch_url or fetch_text.
 - When asked to install software/packages, use install_package.
 - When asked to create a script, use create_script (writes file) then run_script (executes).
@@ -351,6 +369,10 @@ EXAMPLES:
 - Download file:   {"module":"system_control","action":"download","parameters":{"url":"https://example.com/file.pdf"}}
 - Multi search:    {"module":"system_control","action":"multi_search","parameters":{"queries":[{"service":"google","query":"weather"},{"service":"news","query":"today"}]}}
 - Chain tasks:     {"module":"system_control","action":"chain","parameters":{"steps":[{"module":"system_control","action":"open_app","parameters":{"name":"terminal"}},{"module":"system_control","action":"notify","parameters":{"title":"Ready","message":"Terminal opened"}}]}}
+--- APP SEARCH (search for apps, auto-install if missing) ---
+- Find & open:    {"module":"system_control","action":"find_and_open_app","parameters":{"name":"vlc"}}
+- Need an editor: {"module":"system_control","action":"find_and_open_app","parameters":{"name":"text editor"}}
+- Find gimp:      {"module":"system_control","action":"find_and_open_app","parameters":{"name":"gimp"}}
 --- PACKAGE / SCRIPT / GUI AUTOMATION ---
 - Fetch URL:       {"module":"system_control","action":"fetch_url","parameters":{"url":"https://example.com"}}
 - Install pkg:     {"module":"system_control","action":"install_package","parameters":{"name":"htop"}}
