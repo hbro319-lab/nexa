@@ -1,11 +1,22 @@
-# NEXA v2.0 -- Local System Intelligence
+# NEXA v2.1 -- Local System Intelligence
 ### Full System Control -- Powered by Ollama -- 100% offline -- No API keys
 
-**Version:** 2.0.0
+**Version:** 2.1.0
 
 ---
 
-## What's New in v2.0
+## What's New in v2.1
+
+- **Web search** (`web_search`) -- search Google directly from the assistant
+- **URL fetching** (`fetch_url`) -- read and extract content from any web page
+- **Package installation** (`install_package`) -- auto-install via apt/snap/winget/choco/brew/pip
+- **Script creation** (`create_script`) -- create executable script files on the fly
+- **Keyboard & mouse automation** -- `type_text`, `press_key`, `hotkey`, `mouse_click`, `mouse_move`, `mouse_scroll` via pyautogui
+- **Daemon mode** -- run the dispatch server in the background (`--daemon` flag)
+- **Chat API endpoint** (`POST /chat`) -- send natural language to the server, auto-dispatches commands
+- **62 total system_control actions** (up from 50)
+
+## What's in v2.0
 
 - **Cross-platform app search engine** (`nexa_app_finder.py`):
   - Linux: scans `.desktop` files, Flatpak, Snap, and PATH binaries
@@ -84,6 +95,29 @@ pip install -r requirements.txt
 5. Use the **APP SEARCH** bar to find and launch any installed application
 6. Type commands or click quick actions
 
+### Daemon mode (background)
+```bash
+# Start as background daemon
+python nexa_dispatch_server.py --daemon
+
+# Check status
+python nexa_dispatch_server.py --status
+
+# Stop daemon
+python nexa_dispatch_server.py --stop
+```
+
+### Chat API (send natural language to the server)
+```bash
+# Send a message — Ollama processes it and auto-dispatches commands
+curl -X POST http://127.0.0.1:11435/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "search Google for Python tutorials"}'
+
+# Reset conversation history
+curl -X POST http://127.0.0.1:11435/reset
+```
+
 ### Python CLI
 ```bash
 pip install -r requirements.txt
@@ -123,7 +157,7 @@ Everything runs on your machine. Zero cloud calls.
 
 ---
 
-## Full Action List (50 actions)
+## Full Action List (62 actions)
 
 ### Application Launch & Search
 | Action | Description | Key Parameters |
@@ -227,6 +261,34 @@ Everything runs on your machine. Zero cloud calls.
 | `power_action` | Shutdown/reboot/sleep/cancel | `type`, `force`, `delay_seconds` |
 | `lock_screen` | Lock the screen | |
 
+### Web Search (NEW in v2.1)
+| Action | Description | Key Parameters |
+|--------|-------------|----------------|
+| `web_search` | Search Google | `query`, `num_results` |
+| `fetch_url` | Read a web page | `url` |
+
+### Package Management (NEW in v2.1)
+| Action | Description | Key Parameters |
+|--------|-------------|----------------|
+| `install_package` | Install via apt/winget/choco/brew/pip | `name`, `manager` (auto/apt/snap/winget/choco/brew/pip) |
+
+### Script Creation (NEW in v2.1)
+| Action | Description | Key Parameters |
+|--------|-------------|----------------|
+| `create_script` | Create an executable script file | `path`, `content`, `executable` |
+
+### Keyboard & Mouse Automation (NEW in v2.1)
+| Action | Description | Key Parameters |
+|--------|-------------|----------------|
+| `type_text` | Type text via keyboard | `text`, `interval` |
+| `press_key` | Press a single key | `key` |
+| `hotkey` | Press a key combination | `keys` (list, e.g. `["ctrl", "c"]`) |
+| `mouse_click` | Click at coordinates | `x`, `y`, `button`, `clicks` |
+| `mouse_move` | Move cursor | `x`, `y` |
+| `mouse_scroll` | Scroll mouse wheel | `amount` (+up / -down) |
+| `get_mouse_position` | Get cursor position | |
+| `get_screen_size` | Get screen resolution | |
+
 ---
 
 ## Dispatch Server API
@@ -241,6 +303,8 @@ When running `python nexa_dispatch_server.py`:
 | `/categories` | GET | List app categories |
 | `/refresh` | GET | Force re-index apps |
 | `/dispatch` | POST | Execute a NEXA JSON command |
+| `/chat` | POST | Send natural language (Ollama + auto-dispatch) |
+| `/reset` | POST | Clear chat history |
 
 ---
 

@@ -1362,6 +1362,34 @@ def handle_system_control(action, params):
             return "Missing 'url' parameter"
         return web_scrape_text(url)
 
+    elif action == "fetch_url":
+        """Alias for fetch_text — fetch and extract text content from a URL."""
+        url = params.get("url", "")
+        if not url:
+            return "Error: 'url' parameter required"
+        if not url.startswith("http"):
+            url = "https://" + url
+        try:
+            import requests as _req
+            headers = {
+                "User-Agent": (
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                )
+            }
+            resp = _req.get(url, headers=headers, timeout=15)
+            resp.raise_for_status()
+            import re as _re
+            text = resp.text
+            text = _re.sub(r'<(script|style)[^>]*>.*?</\1>', '', text, flags=_re.DOTALL)
+            text = _re.sub(r'<[^>]+>', ' ', text)
+            text = _re.sub(r'\s+', ' ', text).strip()
+            if len(text) > 8000:
+                text = text[:8000] + "\n... (truncated)"
+            return f"Content from {url}:\n\n{text}"
+        except Exception as e:
+            return f"Error fetching {url}: {e}"
+
     elif action == "chain":
         steps = params.get("steps", [])
         if not steps:
@@ -1375,6 +1403,219 @@ def handle_system_control(action, params):
     elif action == "list_websites":
         sites = list_direct_sites()
         return f"Known websites ({len(sites)}): " + ", ".join(sites)
+
+    # ------------------------------------------------------------------
+    # INSTALL PACKAGE
+    # ------------------------------------------------------------------
+
+    elif action == "install_package":
+        """Install a package using the system package manager or pip."""
+        package = params.get("name", "")
+        manager = params.get("manager", "auto")
+        if not package:
+            return "Error: 'name' parameter required"
+
+        if manager == "pip" or manager == "pip3":
+            try:
+                r = subprocess.run(
+                    [sys.executable, "-m", "pip", "install", package],
+                    capture_output=True, text=True, timeout=300
+                )
+                if r.returncode == 0:
+                    return f"'{package}' installed via pip"
+                return f"pip install failed: {r.stderr.strip()}"
+            except Exception as e:
+                return f"Error: {e}"
+
+        if manager == "auto":
+            if SYSTEM == "Linux":
+                managers = ["apt"]
+                if shutil.which("snap"):
+                    managers.append("snap")
+                if shutil.which("flatpak"):
+                    managers.append("flatpak")
+            elif SYSTEM == "Windows":
+                managers = []
+                if shutil.which("winget"):
+                    managers.append("winget")
+                if shutil.which("choco"):
+                    managers.append("choco")
+                if not managers:
+                    return "No package manager found (winget/choco). Install one first."
+            elif SYSTEM == "Darwin":
+                managers = ["brew"] if shutil.which("brew") else []
+            else:
+                return f"Unsupported OS: {SYSTEM}"
+        else:
+            managers = [manager]
+
+        for mgr in managers:
+            try:
+                if mgr == "apt":
+                    cmd = f"sudo apt-get update -qq && sudo apt-get install -y {package}"
+                elif mgr == "snap":
+                    cmd = f"sudo snap install {package}"
+                elif mgr == "flatpak":
+                    cmd = f"flatpak install -y flathub {package}"
+                elif mgr == "winget":
+                    cmd = (
+                        f"winget install --accept-package-agreements "
+                        f"--accept-source-agreements {package}"
+                    )
+                elif mgr == "choco":
+                    cmd = f"choco install -y {package}"
+                elif mgr == "brew":
+                    cmd = f"brew install {package}"
+                else:
+                    continue
+                r = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=300)
+                if r.returncode == 0:
+                    return f"'{package}' installed via {mgr}"
+            except subprocess.TimeoutExpired:
+                continue
+            except Exception:
+                continue
+        return f"Failed to install '{package}' with available package managers"
+
+    # ------------------------------------------------------------------
+    # CREATE SCRIPT
+    # ------------------------------------------------------------------
+
+    elif action == "create_script":
+        """Create a script file with the given content."""
+        path = _expand(params.get("path", ""))
+        content = params.get("content", "")
+        make_executable = params.get("executable", True)
+        if not path or not content:
+            return "Error: 'path' and 'content' parameters required"
+        try:
+            os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(content)
+            if make_executable and SYSTEM != "Windows":
+                import stat
+                st = os.stat(path)
+                os.chmod(path, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+            return f"Script created: {path}"
+        except Exception as e:
+            return f"Error creating script: {e}"
+
+    # ------------------------------------------------------------------
+    # KEYBOARD / MOUSE AUTOMATION
+    # ------------------------------------------------------------------
+
+    elif action == "type_text":
+        """Type text using keyboard automation."""
+        text = params.get("text", "")
+        interval = float(params.get("interval", 0.02))
+        if not text:
+            return "Error: 'text' parameter required"
+        try:
+            import pyautogui
+            pyautogui.FAILSAFE = True
+            pyautogui.write(text, interval=interval)
+            preview = f"{text[:50]}..." if len(text) > 50 else text
+            return f"Typed: '{preview}'"
+        except ImportError:
+            return "Error: pyautogui not installed. Run: pip install pyautogui"
+        except Exception as e:
+            return f"Error typing: {e}"
+
+    elif action == "press_key":
+        """Press a keyboard key or key combination."""
+        key = params.get("key", "")
+        if not key:
+            return "Error: 'key' parameter required"
+        try:
+            import pyautogui
+            pyautogui.FAILSAFE = True
+            pyautogui.press(key)
+            return f"Key pressed: {key}"
+        except ImportError:
+            return "Error: pyautogui not installed. Run: pip install pyautogui"
+        except Exception as e:
+            return f"Error pressing key: {e}"
+
+    elif action == "hotkey":
+        """Press a keyboard shortcut (e.g., ctrl+c, alt+tab)."""
+        keys = params.get("keys", [])
+        if not keys:
+            return "Error: 'keys' parameter required (list of keys)"
+        try:
+            import pyautogui
+            pyautogui.FAILSAFE = True
+            pyautogui.hotkey(*keys)
+            return f"Hotkey pressed: {'+'.join(keys)}"
+        except ImportError:
+            return "Error: pyautogui not installed. Run: pip install pyautogui"
+        except Exception as e:
+            return f"Error: {e}"
+
+    elif action == "mouse_click":
+        """Click at screen coordinates."""
+        x = int(params.get("x", 0))
+        y = int(params.get("y", 0))
+        button = params.get("button", "left")
+        clicks = int(params.get("clicks", 1))
+        try:
+            import pyautogui
+            pyautogui.FAILSAFE = True
+            pyautogui.click(x, y, clicks=clicks, button=button)
+            return f"Clicked ({button}) at ({x}, {y}) x{clicks}"
+        except ImportError:
+            return "Error: pyautogui not installed. Run: pip install pyautogui"
+        except Exception as e:
+            return f"Error clicking: {e}"
+
+    elif action == "mouse_move":
+        """Move mouse to screen coordinates."""
+        x = int(params.get("x", 0))
+        y = int(params.get("y", 0))
+        try:
+            import pyautogui
+            pyautogui.FAILSAFE = True
+            pyautogui.moveTo(x, y)
+            return f"Mouse moved to ({x}, {y})"
+        except ImportError:
+            return "Error: pyautogui not installed. Run: pip install pyautogui"
+        except Exception as e:
+            return f"Error moving mouse: {e}"
+
+    elif action == "mouse_scroll":
+        """Scroll the mouse wheel."""
+        amount = int(params.get("amount", 3))
+        try:
+            import pyautogui
+            pyautogui.FAILSAFE = True
+            pyautogui.scroll(amount)
+            direction = "up" if amount > 0 else "down"
+            return f"Scrolled {direction} ({abs(amount)} clicks)"
+        except ImportError:
+            return "Error: pyautogui not installed. Run: pip install pyautogui"
+        except Exception as e:
+            return f"Error scrolling: {e}"
+
+    elif action == "get_mouse_position":
+        """Get current mouse cursor position."""
+        try:
+            import pyautogui
+            pos = pyautogui.position()
+            return f"Mouse position: ({pos.x}, {pos.y})"
+        except ImportError:
+            return "Error: pyautogui not installed. Run: pip install pyautogui"
+        except Exception as e:
+            return f"Error: {e}"
+
+    elif action == "get_screen_size":
+        """Get screen resolution."""
+        try:
+            import pyautogui
+            size = pyautogui.size()
+            return f"Screen size: {size.width}x{size.height}"
+        except ImportError:
+            return "Error: pyautogui not installed. Run: pip install pyautogui"
+        except Exception as e:
+            return f"Error: {e}"
 
     return f"Unknown system_control action: {action}"
 
